@@ -1,0 +1,431 @@
+<meta name='viewport' content='width=device-width, initial-scale=1'/><!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8" />
+  <title>Recorder + BPM Scratches (iPhone ready)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root { --pad: 14px; }
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; margin: 0; padding: 24px; line-height: 1.4; }
+    h1 { margin: 0 0 8px; font-size: 22px; }
+    .row { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin: 12px 0; }
+    button, input, select { font-size: 16px; padding: 10px 12px; }
+    button { cursor: pointer; }
+    fieldset { border: 1px solid #ddd; border-radius: 10px; padding: var(--pad); margin: 14px 0; }
+    legend { padding: 0 6px; color: #444; }
+    #variants { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; margin-top: 10px; }
+    .card { border: 1px solid #e5e5e5; border-radius: 10px; padding: var(--pad); }
+    .hint { color: #666; font-size: 14px; }
+    #status { font-weight: 600; }
+    .small { font-size: 13px; color: #555; }
+    label.inline { display: inline-flex; align-items: center; gap: 6px; margin-right: 10px; }
+    input[type="range"] { width: 220px; }
+  </style>
+</head>
+<body>
+  <h1>🎙️ Opnemen ➜ 🌀 Scratch (BPM) ➜ 💾 Download WAV</h1>
+  <div class="hint">
+    Tip: gebruik deze pagina via <b>HTTPS</b> of een lokale webserver, anders vraagt iOS soms geen microfoontoestemming.
+  </div>
+
+  <fieldset>
+    <legend>1) Opnemen</legend>
+    <div class="row">
+      <button id="recordBtn">🔴 Start opname</button>
+      <button id="stopBtn" disabled>⏹️ Stop</button>
+      <button id="playRawBtn" disabled>▶️ Play opname</button>
+      <span id="status" class="hint">Nog geen opname…</span>
+    </div>
+  </fieldset>
+
+  <fieldset>
+    <legend>2) Scratch instellingen (in beats/BPM)</legend>
+    <div class="row">
+      <label class="inline">BPM:
+        <input id="bpm" type="range" min="60" max="180" step="1" value="120" />
+        <span id="bpmVal">120</span>
+      </label>
+
+      <label class="inline">Totaal beats:
+        <select id="beatsTotal">
+          <option value="1">1 (1 beat)</option>
+          <option value="2">2</option>
+          <option value="4" selected>4 (1 maat @ 4/4)</option>
+          <option value="8">8 (2 maten)</option>
+        </select>
+      </label>
+
+      <label class="inline">Pre-roll (ms):
+        <select id="prerollMs">
+          <option value="0">0</option>
+          <option value="25">25</option>
+          <option value="50" selected>50</option>
+          <option value="100">100</option>
+          <option value="200">200</option>
+        </select>
+      </label>
+    </div>
+
+    <div class="row small">
+      <span>Patronen (je kunt er meerdere aanvinken; ze worden allemaal gerenderd):</span>
+    </div>
+    <div class="row">
+      <label class="inline"><input type="checkbox" class="pat" value="baby" checked> Baby</label>
+      <label class="inline"><input type="checkbox" class="pat" value="chirp" checked> Chirp</label>
+      <label class="inline"><input type="checkbox" class="pat" value="transformer" checked> Transformer</label>
+      <label class="inline"><input type="checkbox" class="pat" value="tapestop"> Tape-stop</label>
+    </div>
+
+    <div class="row">
+      <button id="renderBtn" disabled>⚙️ Render varianten</button>
+    </div>
+  </fieldset>
+
+  <fieldset>
+    <legend>3) Varianten (play & download)</legend>
+    <div id="variants"></div>
+  </fieldset>
+
+  <p class="small">
+    📝 Werking: we nemen aan dat je sample al begint op het juiste cue-punt. Scratch-patronen zijn tijd-gebaseerd (in beats) en
+    worden gerenderd vanaf het begin van de sample met een kleine <i>pre-roll</i> zodat back-scratches niet direct "onder nul" vallen.
+  </p>
+
+  <script>
+    // ====== Audio context ======
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+    // ====== UI refs ======
+    const recordBtn = document.getElementById('recordBtn');
+    const stopBtn = document.getElementById('stopBtn');
+    const playRawBtn = document.getElementById('playRawBtn');
+    const renderBtn = document.getElementById('renderBtn');
+    const statusEl = document.getElementById('status');
+    const bpmSlider = document.getElementById('bpm');
+    const bpmVal = document.getElementById('bpmVal');
+    const beatsTotalSel = document.getElementById('beatsTotal');
+    const prerollSel = document.getElementById('prerollMs');
+    const variantsDiv = document.getElementById('variants');
+
+    // ====== Recorder ======
+    let mediaRecorder;
+    let chunks = [];
+    let recordedBuffer = null;
+
+    function pickRecorderMime() {
+      if (window.MediaRecorder) {
+        if (MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported('audio/mp4')) return 'audio/mp4';
+        if (MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) return 'audio/webm;codecs=opus';
+        if (MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported('audio/webm')) return 'audio/webm';
+      }
+      return '';
+    }
+
+    async function startRecording() {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        // Speel de live stream zacht af zodat iOS 'm activeert (kan ook weggelaten worden)
+        const live = new Audio();
+        live.muted = true;
+        live.srcObject = stream;
+        live.play().catch(()=>{});
+        const mime = pickRecorderMime();
+        mediaRecorder = new MediaRecorder(stream, mime ? { mimeType: mime } : undefined);
+        chunks = [];
+        mediaRecorder.ondataavailable = (e) => { if (e.data && e.data.size) chunks.push(e.data); };
+        mediaRecorder.onstop = async () => {
+          const blob = new Blob(chunks, { type: mime || 'audio/webm' });
+          statusEl.textContent = 'Opname klaar, aan het decoderen…';
+          try {
+            const arr = await blob.arrayBuffer();
+            recordedBuffer = await audioCtx.decodeAudioData(arr);
+            playRawBtn.disabled = false;
+            renderBtn.disabled = false;
+            statusEl.textContent = `Opname OK (${(recordedBuffer.duration).toFixed(2)}s @ ${recordedBuffer.sampleRate} Hz)`;
+          } catch (err) {
+            statusEl.textContent = 'Kon opname niet decoderen: ' + err.message;
+          }
+        };
+        mediaRecorder.start();
+        recordBtn.disabled = true;
+        stopBtn.disabled = false;
+        playRawBtn.disabled = true;
+        renderBtn.disabled = true;
+        statusEl.textContent = '⏺️ Opnemen…';
+      } catch (err) {
+        alert('Microfoon werkt niet of toestemming geweigerd: ' + err.message);
+      }
+    }
+
+    function stopRecording() {
+      if (mediaRecorder && mediaRecorder.state !== 'inactive') mediaRecorder.stop();
+      stopBtn.disabled = true;
+      recordBtn.disabled = false;
+    }
+
+    function playBuffer(buf) {
+      const src = audioCtx.createBufferSource();
+      src.buffer = buf;
+      src.connect(audioCtx.destination);
+      src.start();
+      return src;
+    }
+
+    // ====== Scratch pattern bibliotheek (in beats) ======
+    // Elke entry: { speed: (relatieve afspeelsnelheid, negatief = achteruit), beats: duur in beats }
+    const PATTERNS = {
+      baby: [
+        { speed: 2.0, beats: 0.25 },   // snel vooruit 1/4 beat
+        { speed: -2.0, beats: 0.25 },  // snel achteruit 1/4 beat
+        { speed: 1.2, beats: 0.50 }    // iets vooruit 1/2 beat
+      ],
+      chirp: [
+        { speed: 3.0, beats: 0.125 },
+        { speed: -1.0, beats: 0.125 },
+        { speed: 2.0, beats: 0.25 },
+        { speed: -2.5, beats: 0.25 },
+        { speed: 1.0, beats: 0.25 }
+      ],
+      transformer: [
+        // "hakkende" korte stukjes
+        { speed: 2.5, beats: 0.0625 },
+        { speed: 0.0, beats: 0.0625 },
+        { speed: -2.0, beats: 0.0625 },
+        { speed: 0.0, beats: 0.0625 },
+        { speed: 2.5, beats: 0.0625 },
+        { speed: 0.0, beats: 0.0625 },
+        { speed: -2.0, beats: 0.0625 },
+        { speed: 0.0, beats: 0.0625 }
+      ],
+      // Tape-stop: we maken m als snelheids-ramp van 1.0 naar 0.0 over 'beatsTotal'
+      tapestop: 'RAMP_TO_ZERO'
+    };
+
+    // ====== Render engine (sample-based, geen CORS nodig) ======
+    // We synthesize een nieuw AudioBuffer door bronposities te volgen obv speed(t).
+    function renderScratchBuffer(srcBuffer, bpm, patternName, beatsTotal, prerollSec) {
+      const sr = srcBuffer.sampleRate;
+      const channels = srcBuffer.numberOfChannels;
+
+      // Bouw tijdlijn in (speed, durationSec) segmenten
+      let segments = [];
+      const beatSec = 60 / bpm;
+
+      if (patternName === 'tapestop') {
+        const totalSec = beatsTotal * beatSec;
+        // Approximeer ramp met 64 korte segmenten
+        const steps = 64;
+        for (let i = 0; i < steps; i++) {
+          const t0 = i / steps, t1 = (i + 1) / steps;
+          const s0 = 1.0 * (1 - t0); // lineair van 1 -> 0
+          const s1 = 1.0 * (1 - t1);
+          const sMid = (s0 + s1) / 2;
+          segments.push({ speed: sMid, seconds: totalSec / steps });
+        }
+      } else {
+        // Herhaal het patroon totdat we 'beatsTotal' vullen
+        const pat = PATTERNS[patternName];
+        if (!pat) throw new Error('Onbekend patroon: ' + patternName);
+        let beatsAccum = 0;
+        let idx = 0;
+        while (beatsAccum < beatsTotal) {
+          const { speed, beats } = pat[idx % pat.length];
+          const b = Math.min(beats, beatsTotal - beatsAccum);
+          segments.push({ speed, seconds: b * beatSec });
+          beatsAccum += b;
+          idx++;
+        }
+      }
+
+      const totalSeconds = segments.reduce((a, s) => a + s.seconds, 0);
+      const outLen = Math.max(1, Math.floor(totalSeconds * sr));
+      const out = new AudioBuffer({ length: outLen, numberOfChannels: channels, sampleRate: sr });
+
+      // Leeskanalen
+      const srcData = [];
+      for (let ch = 0; ch < channels; ch++) srcData[ch] = srcBuffer.getChannelData(ch);
+
+      // Schrijfkanalen
+      const outData = [];
+      for (let ch = 0; ch < channels; ch++) outData[ch] = out.getChannelData(ch);
+
+      // Startpositie net na het begin (preroll) zodat we bij achteruit bewegen niet direct < 0 gaan.
+      let pos = Math.max(0, prerollSec * sr);
+      const srcLen = srcBuffer.length;
+
+      // Helper: lineaire interpolatie
+      function sampleAt(channel, position) {
+        if (position <= 0) return srcData[channel][0];
+        if (position >= srcLen - 1) return srcData[channel][srcLen - 1];
+        const i = position | 0;
+        const frac = position - i;
+        const a = srcData[channel][i];
+        const b = srcData[channel][i + 1];
+        return a + frac * (b - a);
+      }
+
+      // Synthese: loop alle segmenten en schrijf samples
+      let outIndex = 0;
+      for (const seg of segments) {
+        const stepCount = Math.min(outLen - outIndex, Math.floor(seg.seconds * sr));
+        const delta = seg.speed; // 1.0 = normaal, -1.0 = reverse (we laten pos dalen)
+        for (let n = 0; n < stepCount; n++) {
+          for (let ch = 0; ch < channels; ch++) {
+            outData[ch][outIndex] = sampleAt(ch, pos);
+          }
+          pos += delta; // verplaats bronpositie
+          // Clamp zodat we niet buiten de buffer vallen
+          if (pos < 0) pos = 0;
+          if (pos > srcLen - 1) pos = srcLen - 1;
+          outIndex++;
+        }
+        if (outIndex >= outLen) break;
+      }
+
+      // Zachte fade-out om clicks te voorkomen
+      const fadeSamples = Math.min(Math.floor(0.01 * sr), outLen); // 10 ms
+      for (let i = 0; i < fadeSamples; i++) {
+        const g = i / fadeSamples;
+        const idx = outLen - fadeSamples + i;
+        for (let ch = 0; ch < channels; ch++) {
+          outData[ch][idx] *= g;
+        }
+      }
+
+      return out;
+    }
+
+    // ====== WAV export (16-bit PCM, interleaved) ======
+    function audioBufferToWavBlob(buffer) {
+      const numChannels = buffer.numberOfChannels;
+      const sampleRate = buffer.sampleRate;
+      const length = buffer.length;
+
+      // Interleave
+      let interleaved;
+      if (numChannels === 2) {
+        const L = buffer.getChannelData(0);
+        const R = buffer.getChannelData(1);
+        interleaved = new Float32Array(length * 2);
+        let idx = 0;
+        for (let i = 0; i < length; i++) {
+          interleaved[idx++] = L[i];
+          interleaved[idx++] = R[i];
+        }
+      } else {
+        interleaved = buffer.getChannelData(0);
+      }
+
+      // Float32 -> 16-bit PCM
+      const bytesPerSample = 2;
+      const blockAlign = (numChannels) * bytesPerSample;
+      const byteRate = sampleRate * blockAlign;
+      const dataSize = interleaved.length * bytesPerSample;
+      const bufferSize = 44 + dataSize;
+      const ab = new ArrayBuffer(bufferSize);
+      const view = new DataView(ab);
+
+      function writeString(off, s) { for (let i = 0; i < s.length; i++) view.setUint8(off + i, s.charCodeAt(i)); }
+      let offset = 0;
+      writeString(offset, 'RIFF'); offset += 4;
+      view.setUint32(offset, 36 + dataSize, true); offset += 4;
+      writeString(offset, 'WAVE'); offset += 4;
+      writeString(offset, 'fmt '); offset += 4;
+      view.setUint32(offset, 16, true); offset += 4; // PCM chunk size
+      view.setUint16(offset, 1, true); offset += 2;  // PCM format
+      view.setUint16(offset, numChannels, true); offset += 2;
+      view.setUint32(offset, sampleRate, true); offset += 4;
+      view.setUint32(offset, byteRate, true); offset += 4;
+      view.setUint16(offset, blockAlign, true); offset += 2;
+      view.setUint16(offset, 16, true); offset += 2; // bits per sample
+      writeString(offset, 'data'); offset += 4;
+      view.setUint32(offset, dataSize, true); offset += 4;
+
+      // Write samples
+      let idxOut = offset;
+      function clamp(v) { return Math.max(-1, Math.min(1, v)); }
+      if (numChannels === 2) {
+        for (let i = 0; i < interleaved.length; i++) {
+          const s = Math.floor(0x7FFF * clamp(interleaved[i]));
+          view.setInt16(idxOut, s, true);
+          idxOut += 2;
+        }
+      } else {
+        for (let i = 0; i < interleaved.length; i++) {
+          const s = Math.floor(0x7FFF * clamp(interleaved[i]));
+          view.setInt16(idxOut, s, true);
+          idxOut += 2;
+        }
+      }
+
+      return new Blob([ab], { type: 'audio/wav' });
+    }
+
+    // ====== UI logic ======
+    bpmSlider.addEventListener('input', () => bpmVal.textContent = bpmSlider.value);
+
+    recordBtn.addEventListener('click', async () => {
+      await audioCtx.resume();
+      startRecording();
+    });
+
+    stopBtn.addEventListener('click', () => stopRecording());
+
+    playRawBtn.addEventListener('click', () => {
+      if (!recordedBuffer) return;
+      playBuffer(recordedBuffer);
+    });
+
+    renderBtn.addEventListener('click', async () => {
+      if (!recordedBuffer) return alert('Maak eerst een opname.');
+      await audioCtx.resume();
+
+      const bpm = parseFloat(bpmSlider.value);
+      const beatsTotal = parseInt(beatsTotalSel.value, 10);
+      const prerollSec = parseInt(prerollSel.value, 10) / 1000;
+
+      const selected = Array.from(document.querySelectorAll('.pat:checked')).map(el => el.value);
+      if (!selected.length) return alert('Kies minstens één patroon.');
+
+      variantsDiv.innerHTML = '';
+      statusEl.textContent = 'Renderen…';
+
+      // Render elk gekozen patroon
+      for (const name of selected) {
+        let buf;
+        try {
+          buf = renderScratchBuffer(recordedBuffer, bpm, name, beatsTotal, prerollSec);
+        } catch (e) {
+          console.error(e);
+          continue;
+        }
+
+        const blob = audioBufferToWavBlob(buf);
+        const url = URL.createObjectURL(blob);
+
+        const card = document.createElement('div');
+        card.className = 'card';
+        const title = document.createElement('div');
+        title.innerHTML = `<b>${name.toUpperCase()}</b> • ${beatsTotal} beat(s) @ ${bpm} BPM`;
+        const audio = document.createElement('audio');
+        audio.controls = true;
+        audio.src = url;
+        const dl = document.createElement('a');
+        dl.href = url;
+        const niceName = `${name}_${bpm}bpm_${beatsTotal}beats.wav`;
+        dl.download = niceName;
+        dl.textContent = '💾 Download WAV';
+
+        card.appendChild(title);
+        card.appendChild(audio);
+        card.appendChild(dl);
+        variantsDiv.appendChild(card);
+      }
+      statusEl.textContent = 'Klaar ✔️';
+    });
+
+    // Init BPM label
+    bpmVal.textContent = bpmSlider.value;
+  </script>
+</body>
+</html>
