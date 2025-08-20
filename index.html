@@ -1,0 +1,674 @@
+<meta name='viewport' content='width=device-width, initial-scale=1'/><!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8" />
+  <title>Scratch Lab – Builder (Scratch + Gain + Clip + Presets)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root { --bg:#111; --panel:#1b1b1b; --line:#333; --accent:#0af; --text:#eee; --muted:#aaa; }
+    body { margin:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; color:var(--text); background:var(--bg); }
+    header { padding:16px 20px; background:#0c0c0c; border-bottom:1px solid var(--line); }
+    header h1 { margin:0; font-size:20px; }
+    main { padding:18px; display:grid; gap:14px; max-width:980px; margin:0 auto; }
+    .panel { background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:14px; }
+    .row { display:flex; flex-wrap:wrap; gap:10px; align-items:center; }
+    button, input, select { font-size:16px; padding:9px 12px; border-radius:8px; border:1px solid var(--line); background:#151515; color:var(--text); }
+    button { background:#191919; cursor:pointer; }
+    button.primary { background:var(--accent); color:#fff; border:none; }
+    label { display:flex; gap:6px; align-items:center; }
+    .hint { color:var(--muted); font-size:13px; }
+    .grid { display:grid; gap:12px; }
+    .grid.cols2 { grid-template-columns: 1fr 1fr; }
+    canvas { background:#000; border:1px solid var(--line); border-radius:8px; width:100%; height:150px; touch-action:none; }
+    .handles { display:flex; justify-content:space-between; font-size:12px; color:var(--muted); }
+    .section-title { margin:2px 0 6px; font-weight:700; font-size:14px; color:#ddd; }
+    .preset-row { display:flex; gap:8px; align-items:center; }
+    .spacer { flex:1; }
+    a.dl { color:#fff; text-decoration:none; border:1px solid var(--line); padding:8px 10px; border-radius:8px; }
+    .success { color:#7CFC9A; }
+    .danger { color:#ff7676; }
+    .sep { height:1px; background:var(--line); margin:10px 0; }
+  </style>
+</head>
+<body>
+  <header><h1>🎚 Scratch Lab – Builder</h1></header>
+  <main>
+    <!-- Recording -->
+    <div class="panel">
+      <div class="section-title">1) Opnemen / Sample laden</div>
+      <div class="row">
+        <button id="recordBtn">🔴 Start opname</button>
+        <button id="stopBtn" disabled>⏹ Stop</button>
+        <button id="playRawBtn" disabled>▶️ Play sample</button>
+        <span id="recStatus" class="hint">Nog geen sample…</span>
+      </div>
+      <div class="row">
+        <input type="file" id="fileInput" accept="audio/*" />
+        <span class="hint">Of laad een audiofile (m4a/mp3/wav). iOS: CORS geldt voor URL's.</span>
+      </div>
+    </div>
+
+    <!-- Waveform + clip select -->
+    <div class="panel">
+      <div class="section-title">2) Clip selectie</div>
+      <div class="grid">
+        <canvas id="waveCanvas" width="900" height="160"></canvas>
+        <div class="handles">
+          <span>Start: <span id="clipStartLbl">0.00s</span></span>
+          <span>Eind: <span id="clipEndLbl">0.00s</span></span>
+        </div>
+        <div class="row">
+          <label>BPM <input id="bpm" type="number" value="120" min="60" max="200" step="1" /></label>
+          <label>Lengte
+            <select id="bars">
+              <option value="1">1 bar (4 beats)</option>
+              <option value="0.5">1/2 bar (2 beats)</option>
+              <option value="0.25">1/4 bar (1 beat)</option>
+            </select>
+          </label>
+          <label>Tail na scratch
+            <select id="tailMode">
+              <option value="none">Geen tail</option>
+              <option value="clip">Speel door tot clip-einde</option>
+              <option value="sample">Speel door tot sample-einde</option>
+            </select>
+          </label>
+          <span class="spacer"></span>
+          <span class="hint">Sleep de witte handles in de waveform om start/eind te kiezen.</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Curves -->
+    <div class="panel">
+      <div class="section-title">3) Curves kiezen of tekenen</div>
+      <div class="grid cols2">
+        <div>
+          <div class="preset-row">
+            <strong>Scratch curve</strong>
+            <select id="scratchPreset">
+              <option value="fast">⚡ Fast Cut</option>
+              <option value="swing">🎵 Swing</option>
+              <option value="stagger">🥁 Stagger</option>
+              <option value="custom">✏️ Custom (teken)</option>
+            </select>
+            <button id="loadScratchPreset">⤵︎ Laden</button>
+          </div>
+          <canvas id="scratchCanvas" width="900" height="150" title="Teken of bekijk scratch-curve"></canvas>
+          <div class="row">
+            <button id="clearScratch">🧹 Clear scratch-curve</button>
+          </div>
+        </div>
+        <div>
+          <div class="preset-row">
+            <strong>Gain / Crossfader curve</strong>
+            <select id="gainPreset">
+              <option value="open">🔈 Open (1.0)</option>
+              <option value="transformer">✂️ Transformer (chop)</option>
+              <option value="crab">🦀 Crab (stutter)</option>
+              <option value="fade">↗︎ Fade-in</option>
+              <option value="custom">✏️ Custom (teken)</option>
+            </select>
+            <button id="loadGainPreset">⤵︎ Laden</button>
+          </div>
+          <canvas id="gainCanvas" width="900" height="150" title="Teken of bekijk gain-curve (0..1)"></canvas>
+          <div class="row">
+            <button id="clearGain">🧹 Clear gain-curve</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="sep"></div>
+
+      <!-- Preset builder save/load -->
+      <div class="grid">
+        <div class="row">
+          <strong>Preset opslaan</strong>
+          <input id="presetName" type="text" placeholder="Naam van preset..." />
+          <button id="savePreset">💾 Opslaan (local)</button>
+          <span id="saveMsg" class="hint"></span>
+        </div>
+        <div class="row">
+          <strong>Eigen presets</strong>
+          <select id="userPresets"></select>
+          <button id="loadUserPreset">⤴︎ Gebruiken</button>
+          <button id="deleteUserPreset">🗑 Verwijderen</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Render -->
+    <div class="panel">
+      <div class="section-title">4) Renderen & Export</div>
+      <div class="row">
+        <button id="renderBtn" class="primary" disabled>🎧 Render Scratch</button>
+        <span id="renderStatus" class="hint">--</span>
+      </div>
+      <div id="result"></div>
+    </div>
+  </main>
+
+  <script>
+    // ====== Audio context ======
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+    // ====== State ======
+    let mediaRecorder, chunks = [];
+    let sampleBuffer = null;
+    let clipStart = 0, clipEnd = 0; // in seconds
+    const W = 900, H = 160;
+    const scratchPoints = new Float32Array(W).fill(0); // -1..1
+    const gainPoints    = new Float32Array(W).fill(1); //  0..1
+
+    // ====== UI Refs ======
+    const recordBtn = document.getElementById('recordBtn');
+    const stopBtn   = document.getElementById('stopBtn');
+    const playRawBtn= document.getElementById('playRawBtn');
+    const recStatus = document.getElementById('recStatus');
+    const fileInput = document.getElementById('fileInput');
+
+    const waveCanvas = document.getElementById('waveCanvas');
+    const waveCtx = waveCanvas.getContext('2d');
+    const clipStartLbl = document.getElementById('clipStartLbl');
+    const clipEndLbl   = document.getElementById('clipEndLbl');
+
+    const bpmEl = document.getElementById('bpm');
+    const barsEl= document.getElementById('bars');
+    const tailModeEl = document.getElementById('tailMode');
+
+    const scratchCanvas = document.getElementById('scratchCanvas');
+    const scratchCtx = scratchCanvas.getContext('2d');
+    const gainCanvas = document.getElementById('gainCanvas');
+    const gainCtx = gainCanvas.getContext('2d');
+
+    const scratchPresetEl = document.getElementById('scratchPreset');
+    const gainPresetEl = document.getElementById('gainPreset');
+    const loadScratchPresetBtn = document.getElementById('loadScratchPreset');
+    const loadGainPresetBtn = document.getElementById('loadGainPreset');
+    const clearScratchBtn = document.getElementById('clearScratch');
+    const clearGainBtn = document.getElementById('clearGain');
+
+    const presetNameEl = document.getElementById('presetName');
+    const savePresetBtn = document.getElementById('savePreset');
+    const saveMsg = document.getElementById('saveMsg');
+    const userPresetsEl = document.getElementById('userPresets');
+    const loadUserPresetBtn = document.getElementById('loadUserPreset');
+    const deleteUserPresetBtn = document.getElementById('deleteUserPreset');
+
+    const renderBtn = document.getElementById('renderBtn');
+    const renderStatus = document.getElementById('renderStatus');
+    const resultDiv = document.getElementById('result');
+
+    // ====== Helpers ======
+    function drawWaveform() {
+      waveCtx.clearRect(0,0,W,H);
+      waveCtx.fillStyle = '#000';
+      waveCtx.fillRect(0,0,W,H);
+      if (!sampleBuffer) return;
+      const data = sampleBuffer.getChannelData(0);
+      const step = Math.max(1, Math.floor(data.length / W));
+      waveCtx.strokeStyle = '#0f0';
+      waveCtx.beginPath();
+      for (let x = 0; x < W; x++) {
+        const idx = x * step;
+        const v = data[idx] || 0;
+        const y = (1 - (v+1)/2) * H;
+        if (x===0) waveCtx.moveTo(x,y); else waveCtx.lineTo(x,y);
+      }
+      waveCtx.stroke();
+
+      // Draw clip handles
+      const sX = secToX(clipStart);
+      const eX = secToX(clipEnd);
+      waveCtx.fillStyle = 'rgba(255,255,255,0.08)';
+      waveCtx.fillRect(sX,0,Math.max(1,eX-sX),H);
+
+      waveCtx.strokeStyle = '#fff';
+      waveCtx.lineWidth = 2;
+      waveCtx.beginPath(); waveCtx.moveTo(sX,0); waveCtx.lineTo(sX,H); waveCtx.stroke();
+      waveCtx.beginPath(); waveCtx.moveTo(eX,0); waveCtx.lineTo(eX,H); waveCtx.stroke();
+    }
+    function secToX(sec){
+      if(!sampleBuffer) return 0;
+      const ratio = sec / sampleBuffer.duration;
+      return Math.max(0, Math.min(W-1, Math.round(ratio * (W-1))));
+    }
+    function xToSec(x){
+      if(!sampleBuffer) return 0;
+      const ratio = x / (W-1);
+      return ratio * sampleBuffer.duration;
+    }
+
+    function drawCurveOnCanvas(ctx, points, minY=-1, maxY=1) {
+      const h = ctx.canvas.height;
+      ctx.fillStyle = '#000';
+      ctx.fillRect(0,0,ctx.canvas.width,h);
+      ctx.strokeStyle = '#0af';
+      ctx.beginPath();
+      for(let x=0;x<points.length;x++){
+        const v = points[x];
+        const norm = (v - minY) / (maxY - minY); // 0..1
+        const y = (1-norm)*h;
+        if(x===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+      }
+      ctx.stroke();
+      // midline
+      ctx.strokeStyle = '#333';
+      ctx.beginPath();
+      const mid = (0 - minY) / (maxY - minY);
+      const yMid = (1-mid)*h;
+      ctx.moveTo(0,yMid); ctx.lineTo(ctx.canvas.width,yMid); ctx.stroke();
+    }
+
+    function fillPresetCurve(targetArray, fn) {
+      for(let x=0;x<targetArray.length;x++){
+        const t = x / (targetArray.length-1);
+        targetArray[x] = fn(t);
+      }
+    }
+
+    // Scratch presets (vloeiende, asymmetrische)
+    function applyScratchPreset(name){
+      if(name==='fast'){
+        fillPresetCurve(scratchPoints, t => Math.sin(2*Math.PI*6*t) * ((t*4)%1 < 0.5 ? 1 : 0.45));
+      } else if(name==='swing'){
+        fillPresetCurve(scratchPoints, t => {
+          const c = (t*1)%1;
+          return (c<0.7) ?  Math.sin(Math.PI*(c/0.7))
+                         : -Math.sin(Math.PI*((c-0.7)/0.3));
+        });
+      } else if(name==='stagger'){
+        fillPresetCurve(scratchPoints, t => Math.sin(2*Math.PI*3*t) * (t<0.5 ? 1 : 0.5));
+      } else if(name==='custom'){
+        // laat tekencanvas het beslissen
+      }
+      drawCurveOnCanvas(scratchCtx, scratchPoints, -1, 1);
+    }
+
+    // Gain presets (0..1)
+    function applyGainPreset(name){
+      if(name==='open'){
+        fillPresetCurve(gainPoints, _ => 1);
+      } else if(name==='transformer'){
+        // hak op 16e noten (4 per beat): open/dicht
+        fillPresetCurve(gainPoints, t => (((t*16)%1)<0.5) ? 1 : 0);
+      } else if(name==='crab'){
+        // stutter clusters
+        fillPresetCurve(gainPoints, t => {
+          const p = (t*8)%1;
+          return (p<0.1|| (p>0.2&&p<0.3) || (p>0.5&&p<0.6)) ? 1 : 0;
+        });
+      } else if(name==='fade'){
+        fillPresetCurve(gainPoints, t => t);
+      } else if(name==='custom'){
+        // canvas
+      }
+      drawCurveOnCanvas(gainCtx, gainPoints, 0, 1);
+    }
+
+    // ====== Init defaults ======
+    applyScratchPreset('fast');
+    applyGainPreset('open');
+
+    // ====== Recording / loading ======
+    recordBtn.onclick = async () => {
+      await audioCtx.resume();
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        mediaRecorder = new MediaRecorder(stream);
+        chunks = [];
+        mediaRecorder.ondataavailable = e => e.data && chunks.push(e.data);
+        mediaRecorder.onstop = async () => {
+          const blob = new Blob(chunks, { type: chunks[0]?.type || 'audio/webm' });
+          const arr = await blob.arrayBuffer();
+          sampleBuffer = await audioCtx.decodeAudioData(arr);
+          clipStart = 0;
+          clipEnd = sampleBuffer.duration;
+          recStatus.textContent = `✅ Sample: ${sampleBuffer.duration.toFixed(2)}s @ ${sampleBuffer.sampleRate} Hz`;
+          playRawBtn.disabled = false;
+          renderBtn.disabled = false;
+          drawWaveform();
+          updateClipLabels();
+        };
+        mediaRecorder.start();
+        recordBtn.disabled = true; stopBtn.disabled = false;
+        recStatus.textContent = '⏺️ Opnemen…';
+      } catch (err) {
+        recStatus.innerHTML = `<span class="danger">Mic error: ${err.message}</span>`;
+      }
+    };
+    stopBtn.onclick = () => {
+      if (mediaRecorder && mediaRecorder.state!=='inactive') mediaRecorder.stop();
+      stopBtn.disabled = true; recordBtn.disabled = false;
+    };
+    playRawBtn.onclick = () => {
+      if(!sampleBuffer) return;
+      const src = audioCtx.createBufferSource();
+      src.buffer = sampleBuffer;
+      src.connect(audioCtx.destination);
+      src.start();
+    };
+    fileInput.onchange = async (e) => {
+      const file = e.target.files?.[0];
+      if(!file) return;
+      const arr = await file.arrayBuffer();
+      sampleBuffer = await audioCtx.decodeAudioData(arr);
+      clipStart = 0; clipEnd = sampleBuffer.duration;
+      recStatus.textContent = `✅ Sample geladen: ${sampleBuffer.duration.toFixed(2)}s`;
+      playRawBtn.disabled = false; renderBtn.disabled = false;
+      drawWaveform(); updateClipLabels();
+    };
+
+    // ====== Clip handles (drag) ======
+    let dragging = null; // 'start' | 'end' | null
+    waveCanvas.addEventListener('pointerdown', (e)=>{
+      if(!sampleBuffer) return;
+      const rect = waveCanvas.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const sX = secToX(clipStart), eX = secToX(clipEnd);
+      if (Math.abs(x - sX) < 10) dragging = 'start';
+      else if (Math.abs(x - eX) < 10) dragging = 'end';
+      else {
+        // klik midden: verplaats dichtstbijzijnde handle
+        dragging = (Math.abs(x - sX) < Math.abs(x - eX)) ? 'start' : 'end';
+      }
+      waveCanvas.setPointerCapture(e.pointerId);
+    });
+    waveCanvas.addEventListener('pointermove', (e)=>{
+      if(!sampleBuffer || !dragging) return;
+      const rect = waveCanvas.getBoundingClientRect();
+      const x = Math.max(0, Math.min(W-1, e.clientX - rect.left));
+      const sec = xToSec(x);
+      if(dragging==='start'){
+        clipStart = Math.min(sec, clipEnd - 0.01);
+      } else {
+        clipEnd = Math.max(sec, clipStart + 0.01);
+      }
+      drawWaveform(); updateClipLabels();
+    });
+    waveCanvas.addEventListener('pointerup', (e)=>{ dragging=null; waveCanvas.releasePointerCapture(e.pointerId); });
+
+    function updateClipLabels(){
+      clipStartLbl.textContent = (clipStart||0).toFixed(2)+'s';
+      clipEndLbl.textContent   = (clipEnd||0).toFixed(2)+'s';
+    }
+
+    // ====== Curve editors (scratch & gain) ======
+    function makeCurveEditor(canvas, points, min=-1, max=1){
+      const ctx = canvas.getContext('2d');
+      let drawing = false;
+      function draw(){ drawCurveOnCanvas(ctx, points, min, max); }
+      draw();
+
+      canvas.addEventListener('pointerdown', e=>{
+        drawing = true; canvas.setPointerCapture(e.pointerId);
+        paint(e);
+      });
+      canvas.addEventListener('pointermove', e=>{ if(drawing) paint(e); });
+      canvas.addEventListener('pointerup', e=>{ drawing=false; canvas.releasePointerCapture(e.pointerId); });
+
+      function paint(e){
+        const r = canvas.getBoundingClientRect();
+        const x = Math.max(0, Math.min(canvas.width-1, Math.round(e.clientX - r.left)));
+        const y = Math.max(0, Math.min(canvas.height-1, Math.round(e.clientY - r.top)));
+        const norm = 1 - (y / canvas.height); // 0..1
+        const val = min + norm*(max-min);
+        points[x] = Math.max(min, Math.min(max, val));
+        draw();
+      }
+      return { redraw: draw };
+    }
+
+    const scratchEditor = makeCurveEditor(scratchCanvas, scratchPoints, -1, 1);
+    const gainEditor    = makeCurveEditor(gainCanvas, gainPoints, 0, 1);
+
+    // ====== Preset knoppen ======
+    loadScratchPresetBtn.onclick = () => {
+      const v = scratchPresetEl.value;
+      applyScratchPreset(v);
+      scratchEditor.redraw();
+    };
+    loadGainPresetBtn.onclick = () => {
+      const v = gainPresetEl.value;
+      applyGainPreset(v);
+      gainEditor.redraw();
+    };
+    clearScratchBtn.onclick = () => { scratchPoints.fill(0); scratchEditor.redraw(); };
+    clearGainBtn.onclick = () => { gainPoints.fill(1); gainEditor.redraw(); };
+
+    // ====== Rendering (OfflineAudioContext) ======
+    function lerp(a,b,t){ return a + (b-a)*t; }
+    function sampleLinear(chData, pos){
+      // pos in samples (float)
+      const i = Math.floor(pos);
+      const f = pos - i;
+      const i2 = Math.min(chData.length-1, i+1);
+      return lerp(chData[i]||0, chData[i2]||0, f);
+    }
+
+    async function renderScratch() {
+      if(!sampleBuffer) throw new Error('Geen sample');
+      const bpm = parseFloat(bpmEl.value||120);
+      const bars = parseFloat(barsEl.value||1);
+      const beatDur = 60 / bpm;
+      const beats = 4 * bars;
+      const scratchDur = beatDur * beats;
+
+      // Bouw high-res curves (op audiosample-resolutie) uit editorpunten
+      const sr = audioCtx.sampleRate;
+      const scratchSamples = Math.floor(scratchDur * sr);
+      const scratchCurve = new Float32Array(scratchSamples);
+      const gainCurve    = new Float32Array(scratchSamples);
+
+      for(let i=0;i<scratchSamples;i++){
+        const t = i / (scratchSamples-1);
+        const x = Math.min(W-1, Math.floor(t * (W-1)));
+        scratchCurve[i] = scratchPoints[x];               // -1..1
+        gainCurve[i]    = Math.max(0, Math.min(1, gainPoints[x])); // 0..1
+      }
+
+      // Clip in samples
+      const sStart = Math.floor(clipStart * sampleBuffer.sampleRate);
+      const sEnd   = Math.floor(clipEnd   * sampleBuffer.sampleRate);
+      const sLen   = Math.max(1, sEnd - sStart);
+
+      // Output lengte = scratch + eventuele tail
+      let tailMode = tailModeEl.value;
+      let tailLen = 0;
+      if (tailMode!=='none') {
+        const tailEnd = (tailMode==='clip') ? sEnd : sampleBuffer.length;
+        tailLen = Math.max(0, tailEnd - sStart);
+      }
+
+      const outLen = scratchSamples + tailLen;
+      const out = new AudioBuffer({ length: outLen, numberOfChannels: sampleBuffer.numberOfChannels, sampleRate: sampleBuffer.sampleRate });
+
+      // Render scratch-gedeelte
+      for(let ch=0; ch<out.numberOfChannels; ch++){
+        const inData = sampleBuffer.getChannelData(ch);
+        const outData = out.getChannelData(ch);
+        for(let i=0;i<scratchSamples;i++){
+          // Map scratchCurve [-1..1] naar [sStart .. sEnd)
+          const u = (scratchCurve[i] + 1) * 0.5; // 0..1
+          const srcPos = sStart + u * (sLen-1);
+          const v = sampleLinear(inData, srcPos);
+          outData[i] = v * gainCurve[i];
+        }
+      }
+
+      // Tail (forward playback vanaf clipStart -> clipEnd of sample-einde), gain = 1
+      if (tailLen > 0) {
+        for(let ch=0; ch<out.numberOfChannels; ch++){
+          const inData = sampleBuffer.getChannelData(ch);
+          const outData = out.getChannelData(ch);
+          for(let i=0;i<tailLen;i++){
+            const srcPos = sStart + i;
+            const dst = scratchSamples + i;
+            if (dst>=outLen || srcPos>=inData.length) break;
+            outData[dst] = inData[srcPos];
+          }
+        }
+      }
+
+      // Kleine fade-out om clicks te voorkomen
+      const fade = Math.min(sr*0.01, outLen);
+      for(let i=0;i<fade;i++){
+        const g = i/fade;
+        const idx = outLen - fade + i;
+        for(let ch=0; ch<out.numberOfChannels; ch++){
+          out.getChannelData(ch)[idx] *= g;
+        }
+      }
+
+      // Render via OfflineAudioContext zodat we consistent afspelen/exports krijgen
+      const offline = new OfflineAudioContext(out.numberOfChannels, out.length, out.sampleRate);
+      const src = offline.createBufferSource();
+      src.buffer = out;
+      src.connect(offline.destination);
+      src.start();
+      const rendered = await offline.startRendering();
+      return rendered;
+    }
+
+    // ====== WAV export ======
+    function audioBufferToWav(buffer) {
+      const numCh = buffer.numberOfChannels;
+      const sampleRate = buffer.sampleRate;
+      const length = buffer.length;
+      const bytesPerSample = 2;
+      const blockAlign = numCh * bytesPerSample;
+      const byteRate = sampleRate * blockAlign;
+      const dataSize = length * blockAlign;
+      const totalSize = 44 + dataSize;
+      const ab = new ArrayBuffer(totalSize);
+      const dv = new DataView(ab);
+      let p = 0;
+      function w8(v){ dv.setUint8(p++, v); }
+      function w16(v){ dv.setUint16(p, v, true); p+=2; }
+      function w32(v){ dv.setUint32(p, v, true); p+=4; }
+
+      // RIFF header
+      w8(0x52);w8(0x49);w8(0x46);w8(0x46); w32(36 + dataSize);
+      w8(0x57);w8(0x41);w8(0x56);w8(0x45);
+      // fmt
+      w8(0x66);w8(0x6d);w8(0x74);w8(0x20); w32(16); w16(1);
+      w16(numCh); w32(sampleRate); w32(byteRate); w16(blockAlign); w16(16);
+      // data
+      w8(0x64);w8(0x61);w8(0x74);w8(0x61); w32(dataSize);
+
+      // Interleave + write
+      const chans = [];
+      for(let ch=0; ch<numCh; ch++) chans.push(buffer.getChannelData(ch));
+      for(let i=0;i<length;i++){
+        for(let ch=0; ch<numCh; ch++){
+          let s = Math.max(-1, Math.min(1, chans[ch][i]));
+          s = s < 0 ? s * 0x8000 : s * 0x7fff;
+          dv.setInt16(p, s, true); p+=2;
+        }
+      }
+      return new Blob([ab], {type:'audio/wav'});
+    }
+
+    // ====== UI: render knop ======
+    renderBtn.onclick = async () => {
+      try {
+        renderStatus.textContent = 'Renderen…';
+        const rendered = await renderScratch();
+
+        // Play
+        const s = audioCtx.createBufferSource();
+        s.buffer = rendered;
+        s.connect(audioCtx.destination);
+        s.start();
+
+        // Export
+        const wavBlob = audioBufferToWav(rendered);
+        const url = URL.createObjectURL(wavBlob);
+        resultDiv.innerHTML = `<audio controls src="${url}"></audio><br/>
+          <a class="dl" href="${url}" download="scratch_render.wav">💾 Download WAV</a>`;
+        renderStatus.innerHTML = '<span class="success">Klaar ✔</span>';
+      } catch (e) {
+        console.error(e);
+        renderStatus.innerHTML = `<span class="danger">Fout: ${e.message}</span>`;
+      }
+    };
+
+    // ====== Enable render wanneer sample er is ======
+    function enableRenderIfReady(){
+      renderBtn.disabled = !sampleBuffer;
+    }
+    setInterval(enableRenderIfReady, 500);
+
+    // ====== Preset opslag in localStorage ======
+    const LS_KEY = 'scratchlab_user_presets_v1';
+    function loadUserPresets(){
+      const arr = JSON.parse(localStorage.getItem(LS_KEY) || '[]');
+      userPresetsEl.innerHTML = '';
+      arr.forEach((p, i)=>{
+        const opt = document.createElement('option');
+        opt.value = i;
+        opt.textContent = p.name;
+        userPresetsEl.appendChild(opt);
+      });
+    }
+    loadUserPresets();
+
+    savePresetBtn.onclick = () => {
+      const name = (presetNameEl.value||'').trim();
+      if(!name){ saveMsg.textContent = 'Geef een naam.'; return; }
+      const data = {
+        name,
+        scratch: Array.from(scratchPoints),
+        gain: Array.from(gainPoints)
+      };
+      const arr = JSON.parse(localStorage.getItem(LS_KEY) || '[]');
+      // als naam al bestaat → overschrijven
+      const idx = arr.findIndex(p=>p.name===name);
+      if(idx>=0) arr[idx] = data; else arr.push(data);
+      localStorage.setItem(LS_KEY, JSON.stringify(arr));
+      loadUserPresets();
+      saveMsg.innerHTML = '<span class="success">Opgeslagen ✔</span>';
+      setTimeout(()=> saveMsg.textContent='', 1500);
+    };
+
+    loadUserPresetBtn.onclick = () => {
+      const idx = parseInt(userPresetsEl.value,10);
+      const arr = JSON.parse(localStorage.getItem(LS_KEY) || '[]');
+      if (isNaN(idx) || !arr[idx]) return;
+      const p = arr[idx];
+      if (p.scratch?.length===W) {
+        for(let i=0;i<W;i++) scratchPoints[i]=p.scratch[i];
+        drawCurveOnCanvas(scratchCtx, scratchPoints, -1, 1);
+      }
+      if (p.gain?.length===W) {
+        for(let i=0;i<W;i++) gainPoints[i]=p.gain[i];
+        drawCurveOnCanvas(gainCtx, gainPoints, 0, 1);
+      }
+    };
+
+    deleteUserPresetBtn.onclick = () => {
+      const idx = parseInt(userPresetsEl.value,10);
+      const arr = JSON.parse(localStorage.getItem(LS_KEY) || '[]');
+      if (isNaN(idx) || !arr[idx]) return;
+      arr.splice(idx,1);
+      localStorage.setItem(LS_KEY, JSON.stringify(arr));
+      loadUserPresets();
+    };
+
+    // ====== Preset laadknoppen syncen met editor ======
+    scratchPresetEl.onchange = ()=> {
+      if (scratchPresetEl.value!=='custom') applyScratchPreset(scratchPresetEl.value);
+      scratchEditor.redraw();
+    };
+    gainPresetEl.onchange = ()=>{
+      if (gainPresetEl.value!=='custom') applyGainPreset(gainPresetEl.value);
+      gainEditor.redraw();
+    };
+
+    // ====== Eerste tekeningen ======
+    drawWaveform();
+    drawCurveOnCanvas(scratchCtx, scratchPoints, -1, 1);
+    drawCurveOnCanvas(gainCtx, gainPoints, 0, 1);
+  </script>
+</body>
+</html>
