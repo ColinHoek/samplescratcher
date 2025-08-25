@@ -1,0 +1,810 @@
+<!DOCTYPE html>
+<html lang="nl">
+
+<head>
+  <meta charset="UTF-8" />
+  <title>Scratch Lab – Aangepaste Layout</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root {
+      --bg: #111;
+      --panel: #1b1b1b;
+      --line: #333;
+      --accent: #0af;
+      --text: #eee;
+      --muted: #aaa;
+      --blue: #08f;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+      color: var(--text);
+      background: var(--bg);
+    }
+
+    header { padding: 16px 20px; background: #0c0c0c; border-bottom: 1px solid var(--line); }
+    header h1 { margin: 0; font-size: 20px; }
+
+    main {
+      padding: 18px;
+      display: grid;
+      gap: 14px;
+      max-width: 1000px;
+      margin: 0 auto;
+    }
+
+    .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 14px; }
+
+    .row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+    .col { display: grid; gap: 8px; }
+
+    button, input, select {
+      font-size: 16px;
+      padding: 9px 12px;
+      border-radius: 8px;
+      border: 1px solid var(--line);
+      background: #151515;
+      color: var(--text);
+    }
+
+    button { background: #191919; cursor: pointer; }
+    button.primary { background: var(--accent); color: #fff; border: none; }
+    .tiny { font-size: 13px; padding: 4px 8px; }
+
+    .section-title { margin: 2px 0 10px; font-weight: 700; font-size: 14px; color: #ddd; display: flex; align-items: center; gap: 8px; }
+    .hint { color: var(--muted); font-size: 13px; }
+
+    canvas { background: #000; border: 1px solid var(--line); border-radius: 8px; width: 100%; height: 160px; touch-action: none; }
+
+    .handles { display: flex; justify-content: space-between; font-size: 12px; color: var(--muted); }
+
+    /* Voorselectie – smaller en subtiel */
+    #preCanvas { height: 96px; background: #0a0a0a; cursor: crosshair; }
+
+    /* Dropzone */
+    .dropzone {
+      display: flex; align-items: center; justify-content: center; gap: 10px; padding: 22px;
+      border: 2px dashed var(--line); border-radius: 12px; background: #121212;
+      cursor: pointer; transition: border-color .15s, background .15s;
+    }
+    .dropzone.hover { border-color: var(--blue); background: #0f1520; }
+
+    /* Presets grid */
+    .preset-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; }
+
+    .preset-card {
+      background: #181818; border: 1px solid var(--line); border-radius: 12px; padding: 12px;
+      display: flex; flex-direction: column; gap: 8px;
+    }
+    .preset-card h3 { margin: 0; font-size: 16px; }
+    .preset-meta { font-size: 12px; color: var(--muted); }
+
+    /* Mini waveform inside preset */
+    .mini-wrap { display: grid; gap: 6px; }
+    .mini-wave { width: 100%; height: 48px; background: #0a0a0a; border-radius: 8px; border: 1px solid var(--line); }
+    .mini-caption { font-size: 11px; color: #8aa; }
+
+    .preset-actions { display: flex; gap: 8px; }
+    .preset-actions button { flex: 1; font-size: 14px; }
+
+    .add-card { background: #151515; border: 2px dashed var(--line); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 32px; cursor: pointer; color: var(--muted); min-height: 120px; }
+
+    .modal { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.7); display: none; align-items: center; justify-content: center; padding: 20px; }
+    .modal.active { display: flex; }
+    .modal-content { background: var(--panel); border-radius: 12px; padding: 20px; width: 420px; max-width: 100%; display: grid; gap: 12px; }
+    .modal-content label { display: grid; gap: 6px; font-size: 14px; }
+
+    .switch { position: relative; width: 56px; height: 32px; background: #222; border-radius: 999px; border: 1px solid var(--line); cursor: pointer; display: inline-flex; align-items: center; padding: 4px; }
+    .switch .knob { width: 24px; height: 24px; background: #666; border-radius: 50%; transition: transform .15s, background .15s; }
+    .switch.on { background: #0b2a44; border-color: #0b2a44; }
+    .switch.on .knob { transform: translateX(24px); background: var(--blue); }
+
+    .danger { color: #ff7676; }
+    .success { color: #7CFC9A; }
+  </style>
+</head>
+
+<body>
+  <header>
+    <h1>🎚 Scratch Lab – Aangepaste Layout</h1>
+  </header>
+  <main>
+    <!-- 1) Sample laden (dropzone) + opname opklapbaar -->
+    <div class="panel">
+      <div class="section-title">1) Sample laden
+        <button id="playRawBtn" class="tiny" disabled>▶︎ Afspelen</button>
+        <span id="recStatus" class="hint">Nog geen sample…</span>
+      </div>
+      <div id="dropzone" class="dropzone" tabindex="0">
+        <div>📦 Sleep hier een audiofile (m4a/mp3/wav) of klik om te kiezen</div>
+        <input id="fileInput" type="file" accept="audio/*" style="display:none" />
+      </div>
+      <details style="margin-top:10px;">
+        <summary>Opnemen (optioneel)</summary>
+        <div class="row" style="margin-top:8px;">
+          <button id="recordBtn">🔴 Start opname</button>
+          <button id="stopBtn" disabled>⏹ Stop</button>
+        </div>
+      </details>
+    </div>
+
+    <!-- 2) Voorselectie (kort) -->
+    <div class="panel">
+      <div class="section-title">2) Korte voorselectie (voor lange samples)
+        <button id="prePlayBtn" class="tiny" disabled>▶︎</button>
+        <button id="commitPreBtn" class="tiny" disabled>Gebruik als sample</button>
+        <span class="hint">Grijze waveform, blauwe selectie</span>
+      </div>
+      <canvas id="preCanvas" width="900" height="96"></canvas>
+      <div class="handles">
+        <span>Kort begin: <span id="preStartLbl">0.00s</span></span>
+        <span>Kort eind: <span id="preEndLbl">0.00s</span></span>
+      </div>
+    </div>
+
+    <!-- 3) Clip selectie (met drag-balk en default 0.20s) -->
+    <div class="panel">
+      <div class="section-title">3) Clip selectie
+        <button id="clipPlayBtn" class="tiny" disabled>▶︎</button>
+      </div>
+      <canvas id="waveCanvas" width="900" height="160"></canvas>
+      <div class="handles">
+        <span>Start: <span id="clipStartLbl">0.00s</span></span>
+        <span>Eind: <span id="clipEndLbl">0.20s</span></span>
+      </div>
+      <div class="hint">Sleep witte handles of de blauwe drag-balk om de selectie te verplaatsen zonder width te wijzigen.</div>
+    </div>
+
+    <!-- 4) Timing (switch voor tail) -->
+    <div class="panel">
+      <div class="section-title">4) Timing</div>
+      <div class="row">
+        <label>BPM <input id="bpm" type="number" value="120" min="40" max="300" step="1" /></label>
+        <label style="display:flex; align-items:center; gap:10px;">Tail na scratch
+          <span id="tailSwitch" class="switch" role="switch" aria-checked="false" tabindex="0"><span class="knob"></span></span>
+          <span id="tailLbl" class="hint">Geen tail</span>
+        </label>
+        <span id="globalStatus" class="hint"></span>
+      </div>
+    </div>
+
+    <!-- 5) Effect Presets -->
+    <div class="panel">
+      <div class="section-title">5) Effect Presets</div>
+      <div id="presetGrid" class="preset-grid">
+        <div class="add-card" id="addPresetBtn" title="Nieuw effect toevoegen">＋</div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Modal: nieuw effect toevoegen -->
+  <div class="modal" id="presetModal">
+    <div class="modal-content">
+      <h2>Nieuw effect toevoegen</h2>
+      <label>Naam
+        <input type="text" id="presetNameInput" placeholder="Preset naam" />
+      </label>
+      <label>Scratch curve – formule (t ∈ 0..1, verwacht −1..1)
+        <input type="text" id="scratchFormulaInput" placeholder="bijv. Math.sin(2*Math.PI*t*2)" />
+      </label>
+      <label>Gain/Crossfader curve – formule (t ∈ 0..1, verwacht 0..1)
+        <input type="text" id="gainFormulaInput" placeholder="bijv. ((t*8)%1<0.5)?1:0" />
+      </label>
+      <label>Duur (beats)
+        <select id="durationInput">
+          <option value="1">1 beat</option>
+          <option value="2">2 beats</option>
+          <option value="3">3 beats</option>
+          <option value="4">4 beats</option>
+        </select>
+      </label>
+      <div class="row">
+        <button id="saveNewPreset" class="primary">Toevoegen</button>
+        <button id="closeModal">Annuleren</button>
+      </div>
+      <div class="hint">Je kunt <code>Math.*</code> gebruiken. Voorbeeld: <code>Math.sin(2*Math.PI*t)</code></div>
+    </div>
+  </div>
+
+  <script>
+    // ====== Audio setup ======
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+    // ====== State ======
+    let mediaRecorder, chunks = [];
+    let sampleBuffer = null; // huidige sample (kan uit voorselectie komen)
+    let preStart = 0, preEnd = 0; // in sec – voorselectie
+    let clipStart = 0, clipEnd = 0.20; // default breedte 0.20s
+    const W = 900, H = 160;
+
+    // Tail switch
+    let tailMode = 'none'; // 'none' | 'sample'
+
+    // ====== UI refs ======
+    const recordBtn = document.getElementById('recordBtn');
+    const stopBtn = document.getElementById('stopBtn');
+    const playRawBtn = document.getElementById('playRawBtn');
+    const recStatus = document.getElementById('recStatus');
+    const fileInput = document.getElementById('fileInput');
+    const dropzone = document.getElementById('dropzone');
+
+    const preCanvas = document.getElementById('preCanvas');
+    const preCtx = preCanvas.getContext('2d');
+    const preStartLbl = document.getElementById('preStartLbl');
+    const preEndLbl = document.getElementById('preEndLbl');
+    const prePlayBtn = document.getElementById('prePlayBtn');
+    const commitPreBtn = document.getElementById('commitPreBtn');
+
+    const waveCanvas = document.getElementById('waveCanvas');
+    const waveCtx = waveCanvas.getContext('2d');
+    const clipStartLbl = document.getElementById('clipStartLbl');
+    const clipEndLbl = document.getElementById('clipEndLbl');
+    const clipPlayBtn = document.getElementById('clipPlayBtn');
+
+    const bpmEl = document.getElementById('bpm');
+    const tailSwitch = document.getElementById('tailSwitch');
+    const tailLbl = document.getElementById('tailLbl');
+    const globalStatus = document.getElementById('globalStatus');
+
+    const presetGrid = document.getElementById('presetGrid');
+    const addPresetBtn = document.getElementById('addPresetBtn');
+    const modal = document.getElementById('presetModal');
+    const presetNameInput = document.getElementById('presetNameInput');
+    const scratchFormulaInput = document.getElementById('scratchFormulaInput');
+    const gainFormulaInput = document.getElementById('gainFormulaInput');
+    const durationInput = document.getElementById('durationInput');
+    const saveNewPreset = document.getElementById('saveNewPreset');
+    const closeModal = document.getElementById('closeModal');
+
+    // ====== Helpers ======
+    const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+    function lerp(a, b, t) { return a + (b - a) * t; }
+    function sampleLinear(chData, pos) {
+      const i = Math.floor(pos), f = pos - i; const i2 = Math.min(chData.length - 1, i + 1);
+      return lerp(chData[i] || 0, chData[i2] || 0, f);
+    }
+    function secToX(sec, duration, width) { const ratio = duration ? (sec / duration) : 0; return Math.round(clamp(ratio, 0, 1) * (width - 1)); }
+    function xToSec(x, duration, width) { const ratio = x / (width - 1); return ratio * (duration || 0); }
+
+    // === HiDPI-safe sizing ===
+    function fitCanvasToDisplay(canvas) {
+      const dpr = window.devicePixelRatio || 1;
+      const rect = canvas.getBoundingClientRect();
+      const needResize = canvas.width !== Math.round(rect.width * dpr) || canvas.height !== Math.round(rect.height * dpr);
+      if (needResize) {
+        canvas.width = Math.max(1, Math.round(rect.width * dpr));
+        canvas.height = Math.max(1, Math.round(rect.height * dpr));
+      }
+      return dpr;
+    }
+    function canvasEventX(e, canvas) {
+      const dpr = window.devicePixelRatio || 1;
+      const rect = canvas.getBoundingClientRect();
+      return clamp((e.clientX - rect.left) * dpr, 0, canvas.width - 1);
+    }
+
+    // ====== Drawing ======
+    function drawPreWave() {
+      const dpr = fitCanvasToDisplay(preCanvas);
+      const Wp = preCanvas.width, Hp = preCanvas.height;
+      preCtx.clearRect(0, 0, Wp, Hp);
+      preCtx.fillStyle = '#0a0a0a'; preCtx.fillRect(0, 0, Wp, Hp);
+      if (!sampleBuffer) return;
+      const data = sampleBuffer.getChannelData(0);
+      const step = Math.max(1, Math.floor(data.length / Wp));
+      preCtx.strokeStyle = '#666';
+      preCtx.lineWidth = Math.max(1, dpr);
+      preCtx.beginPath();
+      for (let x = 0; x < Wp; x++) {
+        const v = data[x * step] || 0; const y = (1 - (v + 1) / 2) * Hp; if (x === 0) preCtx.moveTo(x, y); else preCtx.lineTo(x, y);
+      }
+      preCtx.stroke();
+
+      // selectie – blauw
+      const sX = secToX(preStart, sampleBuffer.duration, Wp), eX = secToX(preEnd, sampleBuffer.duration, Wp);
+      const a = Math.min(sX, eX), b = Math.max(sX, eX);
+      preCtx.fillStyle = 'rgba(0,136,255,0.25)';
+      preCtx.fillRect(a, 0, Math.max(1, b - a), Hp);
+      preCtx.strokeStyle = '#08f'; preCtx.lineWidth = Math.max(2, 2*dpr);
+      preCtx.beginPath(); preCtx.moveTo(sX, 0); preCtx.lineTo(sX, Hp); preCtx.stroke();
+      preCtx.beginPath(); preCtx.moveTo(eX, 0); preCtx.lineTo(eX, Hp); preCtx.stroke();
+    }
+
+    function drawMainWave() {
+      const dpr = fitCanvasToDisplay(waveCanvas);
+      const Wc = waveCanvas.width, Hc = waveCanvas.height;
+      waveCtx.clearRect(0, 0, Wc, Hc);
+      waveCtx.fillStyle = '#000'; waveCtx.fillRect(0, 0, Wc, Hc);
+      if (!sampleBuffer) return;
+      const data = sampleBuffer.getChannelData(0);
+      const step = Math.max(1, Math.floor(data.length / Wc));
+      waveCtx.strokeStyle = '#0f0';
+      waveCtx.lineWidth = Math.max(1, dpr);
+      waveCtx.beginPath();
+      for (let x = 0; x < Wc; x++) {
+        const v = data[x * step] || 0;
+        const y = (1 - (v + 1) / 2) * Hc;
+        if (x === 0) waveCtx.moveTo(x, y); else waveCtx.lineTo(x, y);
+      }
+      waveCtx.stroke();
+
+      // highlight selectie
+      const sX = secToX(clipStart, sampleBuffer.duration, Wc), eX = secToX(clipEnd, sampleBuffer.duration, Wc);
+      const a = Math.min(sX, eX), b = Math.max(sX, eX);
+      waveCtx.fillStyle = 'rgba(255,255,255,0.08)';
+      waveCtx.fillRect(a, 0, Math.max(1, b - a), Hc);
+
+      // handles
+      waveCtx.strokeStyle = '#fff'; waveCtx.lineWidth = Math.max(2, 2*dpr);
+      waveCtx.beginPath(); waveCtx.moveTo(sX, 0); waveCtx.lineTo(sX, Hc); waveCtx.stroke();
+      waveCtx.beginPath(); waveCtx.moveTo(eX, 0); waveCtx.lineTo(eX, Hc); waveCtx.stroke();
+
+      // drag-bar (blauw balkje in het midden)
+      const midX = Math.round((a + b) / 2);
+      const barW = 12 * dpr, barH = Hc;
+      waveCtx.fillStyle = '#08f';
+      waveCtx.globalAlpha = 0.7;
+      waveCtx.fillRect(midX - barW / 2, 0, barW, barH);
+      waveCtx.globalAlpha = 1;
+    }
+
+    function updateLabels() {
+      clipStartLbl.textContent = (clipStart || 0).toFixed(2) + 's';
+      clipEndLbl.textContent = (clipEnd || 0).toFixed(2) + 's';
+      preStartLbl.textContent = (preStart || 0).toFixed(2) + 's';
+      preEndLbl.textContent = (preEnd || 0).toFixed(2) + 's';
+    }
+
+    // === Mini waveform drawing for presets ===
+    function drawMiniFromBuffer(canvas, buffer) {
+      const dpr = fitCanvasToDisplay(canvas);
+      const ctx = canvas.getContext('2d');
+      const w = canvas.width, h = canvas.height;
+      ctx.clearRect(0, 0, w, h);
+      ctx.fillStyle = '#0a0a0a';
+      ctx.fillRect(0, 0, w, h);
+      if (!buffer) {
+        ctx.fillStyle = '#445';
+        ctx.font = `${11*dpr}px system-ui, sans-serif`;
+        ctx.fillText('Geen sample', 8*dpr, 16*dpr);
+        return;
+      }
+      const data = buffer.getChannelData(0);
+      const step = Math.max(1, Math.floor(data.length / w));
+      ctx.strokeStyle = '#59a7ff';
+      ctx.lineWidth = Math.max(1, dpr);
+      ctx.beginPath();
+      for (let x = 0; x < w; x++) {
+        const v = data[x * step] || 0;
+        const y = (1 - (v + 1) / 2) * h;
+        if (x === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+      }
+      ctx.stroke();
+    }
+
+    // ====== Recording / loading ======
+    async function loadArrayBuffer(arr) {
+      sampleBuffer = await audioCtx.decodeAudioData(arr);
+      // Voorselectie defaults: HELE sample
+      preStart = 0; preEnd = sampleBuffer.duration;
+      // Clip selectie default breedte 0.20s vanaf 0.00
+      clipStart = 0; clipEnd = Math.min(0.20, sampleBuffer.duration);
+      recStatus.textContent = `✅ Sample: ${sampleBuffer.duration.toFixed(2)}s @ ${sampleBuffer.sampleRate} Hz`;
+      playRawBtn.disabled = false; prePlayBtn.disabled = false; clipPlayBtn.disabled = false; commitPreBtn.disabled = false;
+      drawPreWave(); drawMainWave(); updateLabels();
+      // Refresh mini thumbs when new sample arrives
+      updatePresetThumbnails();
+    }
+
+    // Dropzone events
+    dropzone.addEventListener('click', () => fileInput.click());
+    dropzone.addEventListener('dragover', (e) => { e.preventDefault(); dropzone.classList.add('hover'); });
+    dropzone.addEventListener('dragleave', () => dropzone.classList.remove('hover'));
+    dropzone.addEventListener('drop', async (e) => {
+      e.preventDefault(); dropzone.classList.remove('hover');
+      const file = e.dataTransfer.files?.[0]; if (!file) return;
+      const arr = await file.arrayBuffer(); await loadArrayBuffer(arr);
+    });
+    fileInput.onchange = async (e) => { const file = e.target.files?.[0]; if (!file) return; const arr = await file.arrayBuffer(); await loadArrayBuffer(arr); };
+
+    // Recording
+    const startRecording = async () => {
+      await audioCtx.resume();
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      mediaRecorder = new MediaRecorder(stream);
+      chunks = [];
+      mediaRecorder.ondataavailable = e => e.data && chunks.push(e.data);
+      mediaRecorder.onstop = async () => {
+        const blob = new Blob(chunks, { type: chunks[0]?.type || 'audio/webm' });
+        const arr = await blob.arrayBuffer(); await loadArrayBuffer(arr);
+      };
+      mediaRecorder.start();
+      recordBtn.disabled = true; stopBtn.disabled = false; recStatus.textContent = '⏺️ Opnemen…';
+    };
+    recordBtn && (recordBtn.onclick = startRecording);
+    stopBtn && (stopBtn.onclick = () => { if (mediaRecorder && mediaRecorder.state !== 'inactive') mediaRecorder.stop(); stopBtn.disabled = true; recordBtn.disabled = false; });
+    playRawBtn.onclick = () => { if (!sampleBuffer) return; const src = audioCtx.createBufferSource(); src.buffer = sampleBuffer; src.connect(audioCtx.destination); src.start(); };
+
+    // ====== Voorselectie interactie (verbetere precisie + nieuw-selectie) ======
+    let preDragging = null; // 'start' | 'end' | 'move' | 'new'
+    const HANDLE_EPS = 12 * (window.devicePixelRatio || 1);
+
+    function preHitTest(x) {
+      const sX = secToX(preStart, sampleBuffer?.duration, preCanvas.width);
+      const eX = secToX(preEnd, sampleBuffer?.duration, preCanvas.width);
+      const a = Math.min(sX, eX), b = Math.max(sX, eX);
+      if (Math.abs(x - sX) <= HANDLE_EPS) return 'start';
+      if (Math.abs(x - eX) <= HANDLE_EPS) return 'end';
+      if (x > a && x < b) return 'move';
+      return 'new';
+    }
+
+    function updatePreCursor(e) {
+      if (!sampleBuffer) { preCanvas.style.cursor = 'not-allowed'; return; }
+      const x = canvasEventX(e, preCanvas);
+      const kind = preHitTest(x);
+      preCanvas.style.cursor = (kind === 'move') ? 'grab' : (kind === 'start' || kind === 'end') ? 'ew-resize' : 'crosshair';
+    }
+
+    preCanvas.addEventListener('pointermove', (e) => {
+      if (!preDragging) updatePreCursor(e);
+      if (!sampleBuffer || !preDragging) return;
+      const x = canvasEventX(e, preCanvas);
+      const sec = xToSec(x, sampleBuffer.duration, preCanvas.width);
+      if (preDragging === 'start') preStart = Math.min(sec, preEnd - 0.005);
+      else if (preDragging === 'end') preEnd = Math.max(sec, preStart + 0.005);
+      else if (preDragging === 'move') {
+        const width = preEnd - preStart; let newStart = sec - width / 2; newStart = clamp(newStart, 0, (sampleBuffer.duration - width)); preStart = newStart; preEnd = newStart + width;
+      } else if (preDragging === 'new') {
+        preEnd = Math.max(sec, 0); preStart = Math.min(sec, preStart);
+      }
+      drawPreWave(); updateLabels();
+    });
+    preCanvas.addEventListener('pointerdown', (e) => {
+      if (!sampleBuffer) return;
+      preCanvas.setPointerCapture(e.pointerId);
+      const x = canvasEventX(e, preCanvas);
+      const ht = preHitTest(x);
+      if (ht === 'new') {
+        const sec = xToSec(x, sampleBuffer.duration, preCanvas.width);
+        preStart = sec; preEnd = sec; // begin nieuwe selectie
+      }
+      preDragging = ht;
+      updatePreCursor(e);
+    });
+    preCanvas.addEventListener('pointerup', (e) => { preDragging = null; preCanvas.releasePointerCapture(e.pointerId); updatePreCursor(e); });
+    preCanvas.addEventListener('pointerleave', () => { preDragging = null; preCanvas.style.cursor = 'crosshair'; });
+
+    prePlayBtn.onclick = () => {
+      if (!sampleBuffer) return;
+      const src = audioCtx.createBufferSource();
+      const chs = sampleBuffer.numberOfChannels; const sr = sampleBuffer.sampleRate;
+      const len = Math.max(1, Math.floor((preEnd - preStart) * sr));
+      const out = new AudioBuffer({ length: len, numberOfChannels: chs, sampleRate: sr });
+      for (let ch = 0; ch < chs; ch++) {
+        const inData = sampleBuffer.getChannelData(ch); const outData = out.getChannelData(ch);
+        const startIdx = Math.floor(preStart * sr);
+        for (let i = 0; i < len; i++) { outData[i] = inData[startIdx + i] || 0; }
+      }
+      src.buffer = out; src.connect(audioCtx.destination); src.start();
+    };
+
+    // Knip voorselectie → vervang huidige sample
+    commitPreBtn.onclick = () => {
+      if (!sampleBuffer) return;
+      const chs = sampleBuffer.numberOfChannels; const sr = sampleBuffer.sampleRate;
+      const len = Math.max(1, Math.floor((preEnd - preStart) * sr));
+      const newBuf = new AudioBuffer({ length: len, numberOfChannels: chs, sampleRate: sr });
+      for (let ch = 0; ch < chs; ch++) {
+        const inData = sampleBuffer.getChannelData(ch); const outData = newBuf.getChannelData(ch);
+        const startIdx = Math.floor(preStart * sr);
+        for (let i = 0; i < len; i++) { outData[i] = inData[startIdx + i] || 0; }
+      }
+      sampleBuffer = newBuf;
+      // reset ranges na knippen: hele sample voorselectie
+      preStart = 0; preEnd = sampleBuffer.duration;
+      clipStart = 0; clipEnd = Math.min(0.20, sampleBuffer.duration);
+      drawPreWave(); drawMainWave(); updateLabels();
+      globalStatus.innerHTML = '<span class="success">✂️ Voorselectie toegepast als nieuwe sample</span>';
+      updatePresetThumbnails();
+    };
+
+    // ====== Clip handles + drag-bar (breedte vast bij slepen van bar) ======
+    let dragging = null; // 'start' | 'end' | 'move'
+    const MAIN_HANDLE_EPS = 14 * (window.devicePixelRatio || 1);
+    function mainHitTest(x) {
+      const sX = secToX(clipStart, sampleBuffer?.duration, waveCanvas.width);
+      const eX = secToX(clipEnd, sampleBuffer?.duration, waveCanvas.width);
+      const a = Math.min(sX, eX), b = Math.max(sX, eX);
+      const mid = (a + b) / 2;
+      if (Math.abs(x - sX) <= MAIN_HANDLE_EPS) return 'start';
+      if (Math.abs(x - eX) <= MAIN_HANDLE_EPS) return 'end';
+      if (x > mid - 16*(window.devicePixelRatio||1) && x < mid + 16*(window.devicePixelRatio||1)) return 'move'; // blauwe balk
+      return null;
+    }
+    function updateMainCursor(e){
+      if (!sampleBuffer){ waveCanvas.style.cursor = 'not-allowed'; return; }
+      const x = canvasEventX(e, waveCanvas);
+      const ht = mainHitTest(x);
+      waveCanvas.style.cursor = ht === 'move' ? 'grab' : ht ? 'ew-resize' : 'crosshair';
+    }
+    waveCanvas.addEventListener('pointerdown', (e) => {
+      if (!sampleBuffer) return;
+      waveCanvas.setPointerCapture(e.pointerId);
+      const x = canvasEventX(e, waveCanvas);
+      dragging = mainHitTest(x) || 'end';
+      updateMainCursor(e);
+    });
+    waveCanvas.addEventListener('pointermove', (e) => {
+      if (!dragging) updateMainCursor(e);
+      if (!sampleBuffer || !dragging) return;
+      const x = canvasEventX(e, waveCanvas);
+      const sec = xToSec(x, sampleBuffer.duration, waveCanvas.width);
+      if (dragging === 'start') clipStart = Math.min(sec, clipEnd - 0.005);
+      else if (dragging === 'end') clipEnd = Math.max(sec, clipStart + 0.005);
+      else if (dragging === 'move') {
+        const width = clipEnd - clipStart; let newStart = sec - width / 2; newStart = clamp(newStart, 0, (sampleBuffer.duration - width)); clipStart = newStart; clipEnd = newStart + width;
+      }
+      drawMainWave(); updateLabels();
+    });
+    waveCanvas.addEventListener('pointerup', (e) => { dragging = null; waveCanvas.releasePointerCapture(e.pointerId); updatePresetThumbnails(); updateMainCursor(e); });
+    waveCanvas.addEventListener('pointerleave', () => { dragging = null; waveCanvas.style.cursor = 'crosshair'; });
+
+    clipPlayBtn.onclick = () => {
+      if (!sampleBuffer) return;
+      const src = audioCtx.createBufferSource();
+      const chs = sampleBuffer.numberOfChannels; const sr = sampleBuffer.sampleRate;
+      const len = Math.max(1, Math.floor((clipEnd - clipStart) * sr));
+      const out = new AudioBuffer({ length: len, numberOfChannels: chs, sampleRate: sr });
+      for (let ch = 0; ch < chs; ch++) {
+        const inData = sampleBuffer.getChannelData(ch); const outData = out.getChannelData(ch);
+        const startIdx = Math.floor(clipStart * sr);
+        for (let i = 0; i < len; i++) { outData[i] = inData[startIdx + i] || 0; }
+      }
+      src.buffer = out; src.connect(audioCtx.destination); src.start();
+    };
+
+    // ====== Tail switch ======
+    function setTail(on) {
+      tailMode = on ? 'sample' : 'none';
+      tailSwitch.classList.toggle('on', on);
+      tailSwitch.setAttribute('aria-checked', on ? 'true' : 'false');
+      tailLbl.textContent = on ? 'Speel door tot sample-einde' : 'Geen tail';
+      updatePresetThumbnails();
+    }
+    setTail(false);
+    const toggleTail = () => setTail(!(tailMode === 'sample'));
+    tailSwitch.addEventListener('click', toggleTail);
+    tailSwitch.addEventListener('keydown', (e) => { if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); toggleTail(); } });
+
+    // ====== Presets (voorbeeldlijst) ======
+    let presets = [
+      {
+        name: "Classic",
+        duration: "1",
+        scratchFormula: "((((t%1+1)%1)>=0&&((t%1+1)%1)<0.25)?((2*(3*((((t%1+1)%1)-0)/0.25)*((((t%1+1)%1)-0)/0.25)-2*((((t%1+1)%1)-0)/0.25)*((((t%1+1)%1)-0)/0.25)*((((t%1+1)%1)-0)/0.25))-1)):0)+((((t%1+1)%1)>=0.25&&((t%1+1)%1)<0.5)?(-1*((2*(3*((((t%1+1)%1)-0.25)/0.25)*((((t%1+1)%1)-0.25)/0.25)-2*((((t%1+1)%1)-0.25)/0.25)*((((t%1+1)%1)-0.25)/0.25)*((((t%1+1)%1)-0.25)/0.25))-1))):0)+((((t%1+1)%1)>=0.5&&((t%1+1)%1)<0.75)?((2*(3*((((t%1+1)%1)-0.5)/0.25)*((((t%1+1)%1)-0.5)/0.25)-2*((((t%1+1)%1)-0.5)/0.25)*((((t%1+1)%1)-0.5)/0.25)*((((t%1+1)%1)-0.5)/0.25))-1)):0)+((((t%1+1)%1)>=0.75&&((t%1+1)%1)<1)?(-1*((2*(3*((((t%1+1)%1)-0.75)/0.25)*((((t%1+1)%1)-0.75)/0.25)-2*((((t%1+1)%1)-0.75)/0.25)*((((t%1+1)%1)-0.75)/0.25)*((((t%1+1)%1)-0.75)/0.25))-1))):0)",
+        gainFormula: "1"
+      },
+      {
+        name: "Classic 2",
+        duration: "2",
+        scratchFormula: "((((t%1+1)%1)>=0&&((t%1+1)%1)<0.125)?((2*(3*((((t%1+1)%1)-0)/0.125)*((((t%1+1)%1)-0)/0.125)-2*((((t%1+1)%1)-0)/0.125)*((((t%1+1)%1)-0)/0.125)*((((t%1+1)%1)-0)/0.125))-1)):0)+((((t%1+1)%1)>=0.125&&((t%1+1)%1)<0.25)?((0*(Math.sin(2*Math.PI*((((t%1+1)%1)-0.125)/0.125))))+1):0)+((((t%1+1)%1)>=0.25&&((t%1+1)%1)<0.375)?(-1*((2*(3*((((t%1+1)%1)-0.25)/0.125)*((((t%1+1)%1)-0.25)/0.125)-2*((((t%1+1)%1)-0.25)/0.125)*((((t%1+1)%1)-0.25)/0.125)*((((t%1+1)%1)-0.25)/0.125))-1))):0)+((((t%1+1)%1)>=0.375&&((t%1+1)%1)<0.5)?((2*(3*((((t%1+1)%1)-0.375)/0.125)*((((t%1+1)%1)-0.375)/0.125)-2*((((t%1+1)%1)-0.375)/0.125)*((((t%1+1)%1)-0.375)/0.125)*((((t%1+1)%1)-0.375)/0.125))-1)):0)+((((t%1+1)%1)>=0.5&&((t%1+1)%1)<0.625)?((0*(Math.sin(2*Math.PI*((((t%1+1)%1)-0.5)/0.125))))+1):0)+((((t%1+1)%1)>=0.625&&((t%1+1)%1)<0.75)?(-1*((2*(3*((((t%1+1)%1)-0.625)/0.125)*((((t%1+1)%1)-0.625)/0.125)-2*((((t%1+1)%1)-0.625)/0.125)*((((t%1+1)%1)-0.625)/0.125)*((((t%1+1)%1)-0.625)/0.125))-1))):0)+((((t%1+1)%1)>=0.75&&((t%1+1)%1)<0.875)?((2*(3*((((t%1+1)%1)-0.75)/0.125)*((((t%1+1)%1)-0.75)/0.125)-2*((((t%1+1)%1)-0.75)/0.125)*((((t%1+1)%1)-0.75)/0.125)*((((t%1+1)%1)-0.75)/0.125))-1)):0)+((((t%1+1)%1)>=0.875&&((t%1+1)%1)<1)?((0*(Math.sin(2*Math.PI*((((t%1+1)%1)-0.875)/0.125))))+1):0)",
+        gainFormula: "1"
+      },
+      {
+        name: "Hood Scratch",
+        duration: "3",
+        scratchFormula: "((((t%1+1)%1)>=0&&((t%1+1)%1)<0.083333)?((2*(3*((((t%1+1)%1)-0)/0.083333)*((((t%1+1)%1)-0)/0.083333)-2*((((t%1+1)%1)-0)/0.083333)*((((t%1+1)%1)-0)/0.083333)*((((t%1+1)%1)-0)/0.083333))-1)):0)+((((t%1+1)%1)>=0.083333&&((t%1+1)%1)<0.166667)?(-1*((2*(3*((((t%1+1)%1)-0.083333)/0.083333)*((((t%1+1)%1)-0.083333)/0.083333)-2*((((t%1+1)%1)-0.083333)/0.083333)*((((t%1+1)%1)-0.083333)/0.083333)*((((t%1+1)%1)-0.083333)/0.083333))-1))):0)+((((t%1+1)%1)>=0.166667&&((t%1+1)%1)<0.25)?((2*(3*((((t%1+1)%1)-0.166667)/0.083333)*((((t%1+1)%1)-0.166667)/0.083333)-2*((((t%1+1)%1)-0.166667)/0.083333)*((((t%1+1)%1)-0.166667)/0.083333)*((((t%1+1)%1)-0.166667)/0.083333))-1)):0)+((((t%1+1)%1)>=0.25&&((t%1+1)%1)<0.333333)?(-1*((2*(3*((((t%1+1)%1)-0.25)/0.083333)*((((t%1+1)%1)-0.25)/0.083333)-2*((((t%1+1)%1)-0.25)/0.083333)*((((t%1+1)%1)-0.25)/0.083333)*((((t%1+1)%1)-0.25)/0.083333))-1))):0)+((((t%1+1)%1)>=0.333333&&((t%1+1)%1)<0.416667)?((2*(3*((((t%1+1)%1)-0.333333)/0.083333)*((((t%1+1)%1)-0.333333)/0.083333)-2*((((t%1+1)%1)-0.333333)/0.083333)*((((t%1+1)%1)-0.333333)/0.083333)*((((t%1+1)%1)-0.333333)/0.083333))-1)):0)+((((t%1+1)%1)>=0.416667&&((t%1+1)%1)<0.5)?((0*((2*(3*((((t%1+1)%1)-0.416667)/0.083333)*((((t%1+1)%1)-0.416667)/0.083333)-2*((((t%1+1)%1)-0.416667)/0.083333)*((((t%1+1)%1)-0.416667)/0.083333)*((((t%1+1)%1)-0.416667)/0.083333))-1)))+1):0)+((((t%1+1)%1)>=0.5&&((t%1+1)%1)<0.583333)?(-1*((2*(3*((((t%1+1)%1)-0.5)/0.083333)*((((t%1+1)%1)-0.5)/0.083333)-2*((((t%1+1)%1)-0.5)/0.083333)*((((t%1+1)%1)-0.5)/0.083333)*((((t%1+1)%1)-0.5)/0.083333))-1))):0)+((((t%1+1)%1)>=0.583333&&((t%1+1)%1)<0.666667)?((2*(3*((((t%1+1)%1)-0.583333)/0.083333)*((((t%1+1)%1)-0.583333)/0.083333)-2*((((t%1+1)%1)-0.583333)/0.083333)*((((t%1+1)%1)-0.583333)/0.083333)*((((t%1+1)%1)-0.583333)/0.083333))-1)):0)+((((t%1+1)%1)>=0.666667&&((t%1+1)%1)<0.75)?((0*((2*(3*((((t%1+1)%1)-0.666667)/0.083333)*((((t%1+1)%1)-0.666667)/0.083333)-2*((((t%1+1)%1)-0.666667)/0.083333)*((((t%1+1)%1)-0.666667)/0.083333)*((((t%1+1)%1)-0.666667)/0.083333))-1)))+1):0)+((((t%1+1)%1)>=0.75&&((t%1+1)%1)<0.833333)?(-1*((2*(3*((((t%1+1)%1)-0.75)/0.083333)*((((t%1+1)%1)-0.75)/0.083333)-2*((((t%1+1)%1)-0.75)/0.083333)*((((t%1+1)%1)-0.75)/0.083333)*((((t%1+1)%1)-0.75)/0.083333))-1))):0)+((((t%1+1)%1)>=0.833333&&((t%1+1)%1)<0.916667)?((2*(3*((((t%1+1)%1)-0.833333)/0.083333)*((((t%1+1)%1)-0.833333)/0.083333)-2*((((t%1+1)%1)-0.833333)/0.083333)*((((t%1+1)%1)-0.833333)/0.083333)*((((t%1+1)%1)-0.833333)/0.083333))-1)):0)+((((t%1+1)%1)>=0.916667&&((t%1+1)%1)<1)?((0*((2*(3*((((t%1+1)%1)-0.916667)/0.083333)*((((t%1+1)%1)-0.916667)/0.083333)-2*((((t%1+1)%1)-0.916667)/0.083333)*((((t%1+1)%1)-0.916667)/0.083333)*((((t%1+1)%1)-0.916667)/0.083333))-1)))+1):0)",
+        gainFormula: "1"
+      },
+            {
+        name: "Hood Scratch 2",
+        duration: "4",
+        scratchFormula: "((((t%1+1)%1)>=0&&((t%1+1)%1)<0.125)?((2*(3*((((t%1+1)%1)-0)/0.125)*((((t%1+1)%1)-0)/0.125)-2*((((t%1+1)%1)-0)/0.125)*((((t%1+1)%1)-0)/0.125)*((((t%1+1)%1)-0)/0.125))-1)):0)+((((t%1+1)%1)>=0.125&&((t%1+1)%1)<0.3125)?((0*((2*(3*((((t%1+1)%1)-0.125)/0.1875)*((((t%1+1)%1)-0.125)/0.1875)-2*((((t%1+1)%1)-0.125)/0.1875)*((((t%1+1)%1)-0.125)/0.1875)*((((t%1+1)%1)-0.125)/0.1875))-1)))+1):0)+((((t%1+1)%1)>=0.3125&&((t%1+1)%1)<0.375)?(-1*((2*(3*((((t%1+1)%1)-0.3125)/0.0625)*((((t%1+1)%1)-0.3125)/0.0625)-2*((((t%1+1)%1)-0.3125)/0.0625)*((((t%1+1)%1)-0.3125)/0.0625)*((((t%1+1)%1)-0.3125)/0.0625))-1))):0)+((((t%1+1)%1)>=0.375&&((t%1+1)%1)<0.4375)?((2*(3*((((t%1+1)%1)-0.375)/0.0625)*((((t%1+1)%1)-0.375)/0.0625)-2*((((t%1+1)%1)-0.375)/0.0625)*((((t%1+1)%1)-0.375)/0.0625)*((((t%1+1)%1)-0.375)/0.0625))-1)):0)+((((t%1+1)%1)>=0.4375&&((t%1+1)%1)<0.5)?(-1*((2*(3*((((t%1+1)%1)-0.4375)/0.0625)*((((t%1+1)%1)-0.4375)/0.0625)-2*((((t%1+1)%1)-0.4375)/0.0625)*((((t%1+1)%1)-0.4375)/0.0625)*((((t%1+1)%1)-0.4375)/0.0625))-1))):0)+((((t%1+1)%1)>=0.5&&((t%1+1)%1)<0.5625)?((2*(3*((((t%1+1)%1)-0.5)/0.0625)*((((t%1+1)%1)-0.5)/0.0625)-2*((((t%1+1)%1)-0.5)/0.0625)*((((t%1+1)%1)-0.5)/0.0625)*((((t%1+1)%1)-0.5)/0.0625))-1)):0)+((((t%1+1)%1)>=0.5625&&((t%1+1)%1)<0.625)?((0*((2*(3*((((t%1+1)%1)-0.5625)/0.0625)*((((t%1+1)%1)-0.5625)/0.0625)-2*((((t%1+1)%1)-0.5625)/0.0625)*((((t%1+1)%1)-0.5625)/0.0625)*((((t%1+1)%1)-0.5625)/0.0625))-1)))+1):0)+((((t%1+1)%1)>=0.625&&((t%1+1)%1)<0.6875)?(-1*((2*(3*((((t%1+1)%1)-0.625)/0.0625)*((((t%1+1)%1)-0.625)/0.0625)-2*((((t%1+1)%1)-0.625)/0.0625)*((((t%1+1)%1)-0.625)/0.0625)*((((t%1+1)%1)-0.625)/0.0625))-1))):0)+((((t%1+1)%1)>=0.6875&&((t%1+1)%1)<0.75)?((2*(3*((((t%1+1)%1)-0.6875)/0.0625)*((((t%1+1)%1)-0.6875)/0.0625)-2*((((t%1+1)%1)-0.6875)/0.0625)*((((t%1+1)%1)-0.6875)/0.0625)*((((t%1+1)%1)-0.6875)/0.0625))-1)):0)+((((t%1+1)%1)>=0.75&&((t%1+1)%1)<0.8125)?((0*((2*(3*((((t%1+1)%1)-0.75)/0.0625)*((((t%1+1)%1)-0.75)/0.0625)-2*((((t%1+1)%1)-0.75)/0.0625)*((((t%1+1)%1)-0.75)/0.0625)*((((t%1+1)%1)-0.75)/0.0625))-1)))+1):0)+((((t%1+1)%1)>=0.8125&&((t%1+1)%1)<0.875)?(-1*((2*(3*((((t%1+1)%1)-0.8125)/0.0625)*((((t%1+1)%1)-0.8125)/0.0625)-2*((((t%1+1)%1)-0.8125)/0.0625)*((((t%1+1)%1)-0.8125)/0.0625)*((((t%1+1)%1)-0.8125)/0.0625))-1))):0)+((((t%1+1)%1)>=0.875&&((t%1+1)%1)<0.9375)?((2*(3*((((t%1+1)%1)-0.875)/0.0625)*((((t%1+1)%1)-0.875)/0.0625)-2*((((t%1+1)%1)-0.875)/0.0625)*((((t%1+1)%1)-0.875)/0.0625)*((((t%1+1)%1)-0.875)/0.0625))-1)):0)+((((t%1+1)%1)>=0.9375&&((t%1+1)%1)<1)?((0*((2*(3*((((t%1+1)%1)-0.9375)/0.0625)*((((t%1+1)%1)-0.9375)/0.0625)-2*((((t%1+1)%1)-0.9375)/0.0625)*((((t%1+1)%1)-0.9375)/0.0625)*((((t%1+1)%1)-0.9375)/0.0625))-1)))+1):0)",
+        gainFormula: "1"
+      }
+    ];
+
+    // === Render preset grid with mini canvases ===
+    function renderPresetGrid() {
+      [...presetGrid.querySelectorAll('.preset-card')].forEach(n => n.remove());
+      presets.forEach((p, idx) => {
+        const card = document.createElement('div');
+        card.className = 'preset-card';
+        card.innerHTML = `
+          <h3>${p.name}</h3>
+          <div class="preset-meta">Duration: ${p.duration} beat(s)</div>
+          <div class="mini-wrap">
+            <canvas class="mini-wave" data-idx="${idx}" width="240" height="48"></canvas>
+            <div class="mini-caption">Voorbeeld van output-waveform</div>
+          </div>
+          <div class="preset-actions">
+            <button data-idx="${idx}" class="playBtn">Listen</button>
+            <button data-idx="${idx}" class="dlBtn">Download</button>
+          </div>`;
+        presetGrid.insertBefore(card, addPresetBtn);
+      });
+
+      presetGrid.querySelectorAll('.playBtn').forEach(btn => btn.addEventListener('click', async (e) => {
+        const i = parseInt(e.currentTarget.getAttribute('data-idx')); await handlePlayPreset(i);
+      }));
+      presetGrid.querySelectorAll('.dlBtn').forEach(btn => btn.addEventListener('click', async (e) => {
+        const i = parseInt(e.currentTarget.getAttribute('data-idx')); await handleDownloadPreset(i);
+      }));
+
+      updatePresetThumbnails();
+    }
+
+    // Create buffer directly from formula/selection without full offline render (fast path)
+    function synthesizePreviewBuffer(preset) {
+      if (!sampleBuffer) return null;
+      const bpm = parseFloat(bpmEl.value || '120'); const beatDur = 60 / (isFinite(bpm) ? bpm : 120);
+      const beats = parseInt(preset.duration, 10) || 1; const scratchDur = beatDur * beats;
+      const sr = sampleBuffer.sampleRate; const scratchSamples = Math.max(1, Math.floor(scratchDur * sr));
+      const scratchCurve = curveFromFormula(preset.scratchFormula, scratchSamples, -1, 1);
+      const gainCurve = curveFromFormula(preset.gainFormula, scratchSamples, 0, 1);
+
+      const sStart = Math.floor(clipStart * sr);
+      const sEnd = Math.floor(clipEnd * sr);
+      const sLen = Math.max(1, sEnd - sStart);
+
+      const previewLen = tailMode === 'none' ? scratchSamples : Math.min(scratchSamples + Math.floor(sr * 0.25), scratchSamples + sLen);
+      const out = new AudioBuffer({ length: previewLen, numberOfChannels: 1, sampleRate: sr });
+      const inData = sampleBuffer.getChannelData(0);
+      const outData = out.getChannelData(0);
+      for (let i = 0; i < Math.min(scratchSamples, previewLen); i++) {
+        const u = (scratchCurve[i] + 1) * 0.5; // 0..1
+        const srcPos = sStart + u * (sLen - 1);
+        const v = sampleLinear(inData, srcPos);
+        outData[i] = v * gainCurve[i];
+      }
+      for (let i = scratchSamples; i < previewLen; i++) {
+        const srcPos = sStart + (i - scratchSamples);
+        outData[i] = inData[srcPos] || 0;
+      }
+      // GEEN kunstmatige fade to zero hier (tick fix)
+      return out;
+    }
+
+    async function updatePresetThumbnails() {
+      const canvases = presetGrid.querySelectorAll('.mini-wave');
+      canvases.forEach((cv) => {
+        const idx = parseInt(cv.getAttribute('data-idx'));
+        const buf = synthesizePreviewBuffer(presets[idx]);
+        drawMiniFromBuffer(cv, buf);
+      });
+    }
+
+    // Formule → curve array
+    function curveFromFormula(formula, samples, lo, hi) {
+      let fn; try { fn = new Function('t', `return (${formula});`); } catch (err) { throw new Error('Formule fout: ' + err.message); }
+      const arr = new Float32Array(samples);
+      for (let i = 0; i < samples; i++) {
+        const t = samples > 1 ? i / (samples - 1) : 0; let v; try { v = fn(t); } catch (e) { v = 0; }
+        if (!Number.isFinite(v)) v = 0; arr[i] = clamp(v, lo, hi);
+      }
+      return arr;
+    }
+
+    async function renderEffectToBuffer(preset) {
+      if (!sampleBuffer) throw new Error('Geen sample geladen of opgenomen.');
+      const bpm = parseFloat(bpmEl.value || '120'); const beatDur = 60 / (isFinite(bpm) ? bpm : 120);
+      const beats = parseInt(preset.duration, 10) || 1; const scratchDur = beatDur * beats;
+
+      const sr = sampleBuffer.sampleRate; const scratchSamples = Math.max(1, Math.floor(scratchDur * sr));
+      const scratchCurve = curveFromFormula(preset.scratchFormula, scratchSamples, -1, 1);
+      const gainCurve = curveFromFormula(preset.gainFormula, scratchSamples, 0, 1);
+
+      // Clip-informatie
+      const sStart = Math.floor(clipStart * sampleBuffer.sampleRate);
+      const sEnd = Math.floor(clipEnd * sampleBuffer.sampleRate);
+      const sLen = Math.max(1, sEnd - sStart);
+
+      // Tail
+      let tailLen = 0; if (tailMode !== 'none') {
+        const tailEnd = sampleBuffer.length; // tot sample einde
+        tailLen = Math.max(0, tailEnd - sStart);
+      }
+
+      const outLen = scratchSamples + tailLen;
+      const out = new AudioBuffer({ length: outLen, numberOfChannels: sampleBuffer.numberOfChannels, sampleRate: sampleBuffer.sampleRate });
+
+      // Render scratch
+      for (let ch = 0; ch < out.numberOfChannels; ch++) {
+        const inData = sampleBuffer.getChannelData(ch);
+        const outData = out.getChannelData(ch);
+        for (let i = 0; i < scratchSamples; i++) {
+          const u = (scratchCurve[i] + 1) * 0.5; // 0..1
+          const srcPos = sStart + u * (sLen - 1);
+          const v = sampleLinear(inData, srcPos);
+          outData[i] = v * gainCurve[i];
+        }
+      }
+
+      // Tail (gain=1)
+      if (tailLen > 0) {
+        for (let ch = 0; ch < out.numberOfChannels; ch++) {
+          const inData = sampleBuffer.getChannelData(ch);
+          const outData = out.getChannelData(ch);
+          for (let i = 0; i < tailLen; i++) {
+            const srcPos = sStart + i; const dst = scratchSamples + i;
+            if (dst >= outLen || srcPos >= inData.length) break;
+            outData[dst] = inData[srcPos];
+          }
+        }
+      }
+
+      // BELANGRIJK: geen fade-out meer -> clip eindigt precies waar de curve eindigt (geen "tick" naar 0)
+
+      // Offline render
+      const offline = new OfflineAudioContext(out.numberOfChannels, out.length, out.sampleRate);
+      const src = offline.createBufferSource(); src.buffer = out; src.connect(offline.destination); src.start();
+      const rendered = await offline.startRendering();
+      return rendered;
+    }
+
+    function audioBufferToWav(buffer) {
+      const numCh = buffer.numberOfChannels; const sampleRate = buffer.sampleRate; const length = buffer.length;
+      const bytesPerSample = 2; const blockAlign = numCh * bytesPerSample; const byteRate = sampleRate * blockAlign;
+      const dataSize = length * blockAlign; const totalSize = 44 + dataSize;
+      const ab = new ArrayBuffer(totalSize); const dv = new DataView(ab); let p = 0;
+      function w8(v) { dv.setUint8(p++, v); } function w16(v) { dv.setUint16(p, v, true); p += 2; } function w32(v) { dv.setUint32(p, v, true); p += 4; }
+      w8(0x52); w8(0x49); w8(0x46); w8(0x46); w32(36 + dataSize);
+      w8(0x57); w8(0x41); w8(0x56); w8(0x45);
+      w8(0x66); w8(0x6d); w8(0x74); w8(0x20); w32(16); w16(1);
+      w16(numCh); w32(sampleRate); w32(byteRate); w16(blockAlign); w16(16);
+      w8(0x64); w8(0x61); w8(0x74); w8(0x61); w32(dataSize);
+      const chans = []; for (let ch = 0; ch < numCh; ch++) chans.push(buffer.getChannelData(ch));
+      for (let i = 0; i < length; i++) {
+        for (let ch = 0; ch < numCh; ch++) {
+          let s = Math.max(-1, Math.min(1, chans[ch][i])); s = s < 0 ? s * 0x8000 : s * 0x7fff; dv.setInt16(p, s, true); p += 2;
+        }
+      }
+      return new Blob([ab], { type: 'audio/wav' });
+    }
+
+    async function handlePlayPreset(i) {
+      try {
+        await audioCtx.resume();
+        const rendered = await renderEffectToBuffer(presets[i]);
+        const src = audioCtx.createBufferSource(); src.buffer = rendered; src.connect(audioCtx.destination); src.start();
+        globalStatus.innerHTML = `<span class="success">▶️ ${presets[i].name} afgespeeld</span>`;
+      } catch (err) { globalStatus.innerHTML = `<span class="danger">${err.message}</span>`; }
+    }
+
+    async function handleDownloadPreset(i) {
+      try {
+        const rendered = await renderEffectToBuffer(presets[i]);
+        const wav = audioBufferToWav(rendered);
+        const url = URL.createObjectURL(wav);
+        const a = document.createElement('a'); a.href = url; a.download = `${presets[i].name.replace(/[^a-z0-9_-]+/ig, '_')}.wav`; a.click();
+        globalStatus.innerHTML = `<span class="success">💾 ${presets[i].name} gedownload</span>`;
+      } catch (err) { globalStatus.innerHTML = `<span class="danger">${err.message}</span>`; }
+    }
+
+    // UI events voor modal
+    addPresetBtn.onclick = () => { presetNameInput.value = ''; scratchFormulaInput.value = ''; gainFormulaInput.value = ''; durationInput.value = '1'; modal.classList.add('active'); };
+    closeModal.onclick = () => { modal.classList.remove('active'); };
+    saveNewPreset.onclick = () => {
+      const name = (presetNameInput.value || '').trim() || `Custom ${presets.length + 1}`;
+      const scratchFormula = (scratchFormulaInput.value || '').trim();
+      const gainFormula = (gainFormulaInput.value || '').trim();
+      const duration = durationInput.value;
+      if (!scratchFormula || !gainFormula) { globalStatus.innerHTML = '<span class="danger">Vul beide formules in.</span>'; return; }
+      presets.push({ name, duration, scratchFormula, gainFormula });
+      renderPresetGrid(); modal.classList.remove('active');
+    };
+
+    // Keep thumbnails up to date when BPM changes
+    bpmEl.addEventListener('input', () => updatePresetThumbnails());
+
+    // ====== Init ======
+    fitCanvasToDisplay(preCanvas); fitCanvasToDisplay(waveCanvas);
+    drawPreWave(); drawMainWave(); updateLabels(); renderPresetGrid();
+  </script>
+</body>
+
+</html>
