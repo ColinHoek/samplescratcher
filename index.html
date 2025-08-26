@@ -513,6 +513,7 @@
       <div class="section-title">
         <h2 id="fileSubtitle">Preselection</h2>
         <div class="row">
+          <button id="reloadSampleBtn" class="tiny pill ghost" disabled>Reload Sample</button>
           <button id="prePlayBtn" class="tiny pill ghost" disabled>Preview</button>
           <button id="commitPreBtn" class="tiny pill primary" disabled>Cut Sample</button>
         </div>
@@ -590,6 +591,7 @@
 
     let mediaRecorder, chunks = [];
     let sampleBuffer = null;
+    let originalSampleBuffer = null;
     let sampleFileName = '';
 
     let preStart = 0, preEnd = 0;
@@ -615,6 +617,7 @@
     const preStartLbl = document.getElementById('preStartLbl');
     const preEndLbl = document.getElementById('preEndLbl');
     const preLenLbl = document.getElementById('preLenLbl');
+    const reloadSampleBtn = document.getElementById('reloadSampleBtn');
     const prePlayBtn = document.getElementById('prePlayBtn');
     const commitPreBtn = document.getElementById('commitPreBtn');
 
@@ -765,12 +768,13 @@
     // ==== load / record
     async function loadArrayBuffer(arr, name = '') {
       sampleBuffer = await audioCtx.decodeAudioData(arr);
+      originalSampleBuffer = sampleBuffer;
       sampleFileName = name || 'Sample';
       fileSubtitle.textContent = sampleFileName;
       preStart = 0; preEnd = sampleBuffer.duration;
       clipStart = 0; clipEnd = Math.min(0.15, sampleBuffer.duration);
       recStatus.textContent = `Sample: ${sampleBuffer.duration.toFixed(2)}s @ ${sampleBuffer.sampleRate} Hz`;
-      prePlayBtn.disabled = false; commitPreBtn.disabled = false;
+      prePlayBtn.disabled = false; commitPreBtn.disabled = false; reloadSampleBtn.disabled = false;
       drawPreWave(); drawMainWave(); updateLabels(); renderPresetGrid(true); updatePresetThumbnails();
     }
 
@@ -834,6 +838,22 @@
       sampleBuffer = newBuf; preStart = 0; preEnd = sampleBuffer.duration; clipStart = 0; clipEnd = Math.min(0.15, sampleBuffer.duration);
       drawPreWave(); drawMainWave(); updateLabels(); globalStatus.textContent = 'Preselection applied as new sample'; renderPresetGrid(true); updatePresetThumbnails();
     };
+
+    reloadSampleBtn.onclick = () => {
+  if (!originalSampleBuffer) return;
+  sampleBuffer = originalSampleBuffer;   // restore
+  preStart = 0;
+  preEnd = sampleBuffer.duration;
+  clipStart = 0;
+  clipEnd = Math.min(0.20, sampleBuffer.duration);
+
+  drawPreWave();
+  drawMainWave();
+  updateLabels();
+  globalStatus.textContent = 'Sample reloaded to original state';
+  renderPresetGrid(true);
+  updatePresetThumbnails();
+};
 
     // ==== main selection with play circle (no visible mid bar)
     let dragging = null; // 'start' | 'end' | 'move'
