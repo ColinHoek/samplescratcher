@@ -680,11 +680,11 @@
       preCtx.beginPath(); preCtx.moveTo(eX, 0); preCtx.lineTo(eX, Hp); preCtx.stroke();
 
       if (playhead.active && playhead.where === 'pre') {
-        const x = secToX((audioCtx.currentTime - playhead.startAt), (preEnd - preStart), Wp) + a;
-        preCtx.strokeStyle = '#ffffff'; preCtx.lineWidth = Math.max(1, dpr);
-        preCtx.beginPath(); preCtx.moveTo(x, 0); preCtx.lineTo(x, Hp); preCtx.stroke();
-      }
-    }
+  const elapsed = Math.min(audioCtx.currentTime - playhead.startAt, preEnd - preStart);
+  const x = secToX(elapsed, (preEnd - preStart), Wp) + a;
+  preCtx.strokeStyle = '#ffffff'; preCtx.lineWidth = Math.max(1, dpr);
+  preCtx.beginPath(); preCtx.moveTo(x, 0); preCtx.lineTo(x, Hp); preCtx.stroke();
+}
 
     function drawMainWave() {
       const dpr = fitCanvasToDisplay(waveCanvas);
