@@ -680,17 +680,10 @@
       preCtx.beginPath(); preCtx.moveTo(eX, 0); preCtx.lineTo(eX, Hp); preCtx.stroke();
 
       if (playhead.active && playhead.where === 'pre') {
-  const elapsed = audioCtx.currentTime - playhead.startAt;
-  const duration = preEnd - preStart;
-  const rel = Math.min(elapsed, duration); // clamp to selection length
-  const x = secToX(preStart + rel, sampleBuffer.duration, Wp);
-  preCtx.strokeStyle = '#ffffff';
-  preCtx.lineWidth = Math.max(1, dpr);
-  preCtx.beginPath();
-  preCtx.moveTo(x, 0);
-  preCtx.lineTo(x, Hp);
-  preCtx.stroke();
-}
+        const x = secToX((audioCtx.currentTime - playhead.startAt), (preEnd - preStart), Wp) + a;
+        preCtx.strokeStyle = '#ffffff'; preCtx.lineWidth = Math.max(1, dpr);
+        preCtx.beginPath(); preCtx.moveTo(x, 0); preCtx.lineTo(x, Hp); preCtx.stroke();
+      }
     }
 
     function drawMainWave() {
