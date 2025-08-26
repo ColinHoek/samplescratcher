@@ -513,7 +513,7 @@
       <div class="section-title">
         <h2 id="fileSubtitle">Preselection</h2>
         <div class="row">
-          <button id="reloadSampleBtn" class="tiny pill ghost" disabled>Reset</button>
+          <button id="reloadSampleBtn" class="tiny pill ghost" disabled>Reload Sample</button>
           <button id="prePlayBtn" class="tiny pill ghost" disabled>Preview</button>
           <button id="commitPreBtn" class="tiny pill primary" disabled>Cut Sample</button>
         </div>
@@ -685,6 +685,7 @@
   preCtx.strokeStyle = '#ffffff'; preCtx.lineWidth = Math.max(1, dpr);
   preCtx.beginPath(); preCtx.moveTo(x, 0); preCtx.lineTo(x, Hp); preCtx.stroke();
 }
+    }
 
     function drawMainWave() {
       const dpr = fitCanvasToDisplay(waveCanvas);
