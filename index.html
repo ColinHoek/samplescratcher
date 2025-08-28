@@ -624,6 +624,10 @@
           <label for="vinylNoise">Vinyl Noise</label>
           <input type="checkbox" id="vinylNoise" />
         </div>
+        <div class="field">
+  <label for="crackleMode">Scratch Noise</label>
+  <input type="checkbox" id="crackleMode" />
+</div>
         <button id="generateBtn" class="primary" style="font-size:18px; padding:14px 28px; border-radius:999px;"
           disabled>
           Generate Samples
@@ -655,6 +659,8 @@
   </template>
 
   <script>
+
+const crackleModeEl = document.getElementById('crackleMode');
 
     let vinylBuffers = [];
 
@@ -1275,14 +1281,20 @@
     }
 
     async function renderEffectToBuffer(preset) {
-      if (!sampleBuffer) throw new Error('No sample loaded or recorded.');
+      let targetBuffer = sampleBuffer;
+
+if (crackleModeEl.checked) {
+  if (vinylBuffers.length === 0) throw new Error('No crackle loaded.');
+  targetBuffer = getRandomVinylBuffer();
+}
+if (!targetBuffer) throw new Error('No sample or crackle available.');
 
       const bpm = parseFloat(bpmEl.value || '120');
       const beatDur = 60 / (isFinite(bpm) ? bpm : 120);
       const beats = parseInt(preset.duration, 10) || 1;
       const scratchDur = beatDur * beats;
 
-      const sr = sampleBuffer.sampleRate;
+      const sr = targetBuffer.sampleRate;
       const scratchSamples = Math.max(1, Math.floor(scratchDur * sr));
       const scratchCurve = curveFromFormula(preset.scratchFormula, scratchSamples, -1, 1);
       const gainCurve = curveFromFormula(preset.gainFormula, scratchSamples, 0, 1);
@@ -1301,7 +1313,7 @@
       let lastPos = sStart;
 
       for (let ch = 0; ch < out.numberOfChannels; ch++) {
-        const inData = sampleBuffer.getChannelData(ch);
+        const inData = targetBuffer.getChannelData(ch);
         const outData = out.getChannelData(ch);
 
         // --- Scratch part ---
@@ -1431,14 +1443,20 @@
     }
 
     function synthesizePreviewBuffer(preset) {
-      if (!sampleBuffer) return null;
+      let targetBuffer = sampleBuffer;
+
+if (crackleModeEl.checked) {
+  if (vinylBuffers.length === 0) throw new Error('No crackle loaded.');
+  targetBuffer = getRandomVinylBuffer();
+}
+if (!targetBuffer) return null;
 
       const bpm = parseFloat(bpmEl.value || '120');
       const beatDur = 60 / (isFinite(bpm) ? bpm : 120);
       const beats = parseInt(preset.duration, 10) || 1;
       const scratchDur = beatDur * beats;
 
-      const sr = sampleBuffer.sampleRate;
+      const sr = targetBuffer.sampleRate;
       const scratchSamples = Math.max(1, Math.floor(scratchDur * sr));
       const scratchCurve = curveFromFormula(preset.scratchFormula, scratchSamples, -1, 1);
       const gainCurve = curveFromFormula(preset.gainFormula, scratchSamples, 0, 1);
@@ -1448,7 +1466,7 @@
       const sLen = Math.max(1, sEnd - sStart);
 
       let out = new AudioBuffer({ length: scratchSamples, numberOfChannels: 1, sampleRate: sr });
-      const inData = sampleBuffer.getChannelData(0);
+      const inData = targetBuffer.getChannelData(0);
       const outData = out.getChannelData(0);
 
       let lastPos = sStart;
