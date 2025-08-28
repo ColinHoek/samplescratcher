@@ -625,7 +625,7 @@
           <input type="checkbox" id="vinylNoise" />
         </div>
         <div class="field">
-  <label for="crackleMode">Scratch Noise</label>
+  <label for="crackleMode">Scratching Noise</label>
   <input type="checkbox" id="crackleMode" />
 </div>
         <button id="generateBtn" class="primary" style="font-size:18px; padding:14px 28px; border-radius:999px;"
@@ -1473,12 +1473,32 @@ if (!targetBuffer) return null;
 
       // Scratch part
       for (let i = 0; i < scratchSamples; i++) {
-        const u = (scratchCurve[i] + 1) * 0.5;
-        const srcPos = sStart + u * (sLen - 1);
-        lastPos = srcPos;
-        const v = sampleLinear(inData, srcPos);
-        outData[i] = v * gainCurve[i];
-      }
+  const u = (scratchCurve[i] + 1) * 0.5;
+  const srcPos = sStart + u * (sLen - 1);
+  lastPos = srcPos;
+
+  // main sample
+  const v = sampleLinear(inData, srcPos);
+
+let crackle = 0;
+if (crackleModeEl.checked && vinylBuffers.length > 0) {
+  const crackleBuffer = getRandomVinylBuffer();
+  const cData = crackleBuffer.getChannelData(0);
+  crackle = sampleLinear(cData, (srcPos % cData.length)) * 0.25;
+}
+
+outData[i] = (v + crackle) * gainCurve[i];
+
+  // crackle layer (only if enabled)
+  let crackle = 0;
+  if (crackleModeEl.checked && vinylBuffers.length > 0) {
+    const crackleBuffer = getRandomVinylBuffer(); // pick random one
+    const cData = crackleBuffer.getChannelData(0); // assume mono
+    crackle = sampleLinear(cData, (srcPos % cData.length)) * 0.25; // 25% volume
+  }
+
+  outData[i] = (v + crackle) * gainCurve[i];
+}
 
       if (scratchSamples > 0) {
         const v = sampleLinear(inData, lastPos);
