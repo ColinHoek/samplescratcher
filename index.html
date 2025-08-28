@@ -824,7 +824,7 @@
 
         for (let i = 0; i < buffer.length; i++) {
           const dry = inData[i] || 0;
-          const noise = nData[i % nLen] * 0.5; // adjust volume (0.25 = 25%)
+          const noise = nData[i % nLen] * 0.25; // adjust volume (0.25 = 25%)
           outData[i] = dry + noise;
         }
       }
