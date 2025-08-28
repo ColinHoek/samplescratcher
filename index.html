@@ -625,7 +625,7 @@
           <input type="checkbox" id="vinylNoise" />
         </div>
         <div class="field">
-  <label for="crackleMode">Scratching Noise</label>
+  <label for="crackleMode">Scratch Noise</label>
   <input type="checkbox" id="crackleMode" />
 </div>
         <button id="generateBtn" class="primary" style="font-size:18px; padding:14px 28px; border-radius:999px;"
@@ -1479,15 +1479,6 @@ if (!targetBuffer) return null;
 
   // main sample
   const v = sampleLinear(inData, srcPos);
-
-let crackle = 0;
-if (crackleModeEl.checked && vinylBuffers.length > 0) {
-  const crackleBuffer = getRandomVinylBuffer();
-  const cData = crackleBuffer.getChannelData(0);
-  crackle = sampleLinear(cData, (srcPos % cData.length)) * 0.25;
-}
-
-outData[i] = (v + crackle) * gainCurve[i];
 
   // crackle layer (only if enabled)
   let crackle = 0;
