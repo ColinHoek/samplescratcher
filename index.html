@@ -279,7 +279,13 @@
 
     .handles .center {
       text-align: center;
+      color: var(--muted);
+      /* keep label dim */
+    }
+
+    .handles .center .value {
       color: #d7d7d7;
+      /* pop just the number */
       font-weight: 600;
     }
 
@@ -297,7 +303,7 @@
     .settings-row {
       display: flex;
       flex-wrap: wrap;
-      align-items: flex-end;
+      align-items: center;
       gap: 20px;
     }
 
@@ -546,6 +552,114 @@
       cursor: not-allowed;
       pointer-events: none;
     }
+
+
+    /* === Slip Mode Switch === */
+    .switch-field {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .switch-label {
+      font-size: 16px;
+      font-weight: 600;
+      font-family: Oswald, sans-serif;
+      letter-spacing: .3px;
+    }
+
+    /* Switch styling */
+    .switch {
+      position: relative;
+      display: inline-block;
+      width: 50px;
+      height: 28px;
+    }
+
+    .switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: #333;
+      transition: .3s;
+      border-radius: 999px;
+    }
+
+    .slider:before {
+      position: absolute;
+      content: "";
+      height: 20px;
+      width: 20px;
+      left: 4px;
+      bottom: 4px;
+      background-color: white;
+      border-radius: 50%;
+      transition: .3s;
+    }
+
+    /* Active state */
+    .switch input:checked+.slider {
+      background-color: var(--accent);
+    }
+
+    .switch input:checked+.slider:before {
+      transform: translateX(22px);
+    }
+
+    /* Settings panel (no shadow, flat bottom) */
+    #settingsPanel {
+      margin-bottom: -20px;
+      /* overlap into Effects */
+      border-bottom-left-radius: 0;
+      border-bottom-right-radius: 0;
+      box-shadow: none;
+      /* remove its own shadow */
+      position: relative;
+      z-index: 1;
+      /* ensure it’s above the page bg */
+    }
+
+    /* Effects panel (has shadow, flat top, casts shadow over Settings) */
+    #effectsPanel {
+      margin-top: 0;
+      border-top-left-radius: 0;
+      border-top-right-radius: 0;
+      box-shadow: var(--shadow);
+      /* keep the drop shadow */
+      position: relative;
+      z-index: 2;
+      /* sits above Settings, casts shadow */
+    }
+
+
+    /* Load Panel */
+    #loadPanel {
+      margin-bottom: -20px;
+      /* pull it closer to Pre panel */
+      border-bottom-left-radius: 0;
+      /* flatten bottom corners */
+      border-bottom-right-radius: 0;
+      position: relative;
+      z-index: 1;
+      /* keep it above Pre panel */
+    }
+
+    /* Preselection Panel */
+    #prePanel {
+      margin-top: 0;
+      border-top-left-radius: 0;
+      /* flatten top corners */
+      border-top-right-radius: 0;
+    }
   </style>
 </head>
 
@@ -576,7 +690,7 @@
 
     <section class="panel" id="prePanel">
       <div class="section-title">
-        <h2 id="fileSubtitle">Preselection</h2>
+        <h2 id="fileSubtitle">Sample Preparing</h2>
         <div class="row">
           <button id="reloadSampleBtn" class="tiny pill ghost" disabled>Reset</button>
           <button id="commitPreBtn" class="tiny pill primary" disabled>Cut Sample</button>
@@ -588,7 +702,7 @@
       <canvas id="preCanvas" width="900" height="80"></canvas>
       <div class="handles">
         <span>Cut start: <span id="preStartLbl">0.00s</span></span>
-        <span class="center">Length: <span id="preLenLbl">0.00s</span></span>
+        <span class="center">Length: <span id="preLenLbl" class="value">0.00s</span></span>
         <span>Cut end: <span id="preEndLbl">0.00s</span></span>
       </div>
     </section>
@@ -601,37 +715,37 @@
       <canvas id="waveCanvas" width="900" height="160" aria-label="Scratching waveform"></canvas>
       <div class="handles">
         <span>Start: <span id="clipStartLbl">0.00s</span></span>
-        <span class="center">Length: <span id="clipLenLbl">0.15s</span></span>
+        <span class="center">Length: <span id="clipLenLbl" class="value">0.15s</span></span>
         <span>End: <span id="clipEndLbl">0.15s</span></span>
       </div>
     </section>
 
-    <!-- 4) Settings (Torque + Tail switch) -->
-    <section class="panel">
+    <!-- 4) Settings -->
+    <section class="panel" id="settingsPanel">
       <div class="section-title">
-        <h2>Settings</h2>
+        <h2>Sample Generation</h2>
       </div>
       <div class="settings-row">
         <div class="field">
-          <label for="bpm">BPM</label>
+          <span class="switch-label">BPM</span>
           <input id="bpm" type="number" value="120" min="40" max="300" step="1" />
         </div>
-        <div class="field">
-  <label for="slipMode">Slip Mode</label><br />
-  <input id="slipMode" type="checkbox" />
-</div>
-        <button id="generateBtn" class="primary" style="font-size:18px; padding:14px 28px; border-radius:999px;"
-          disabled>
+        <div class="field switch-field">
+          <span style=" padding:7px" class="switch-label">Slip Mode</span>
+          <label class="switch">
+            <input id="slipMode" type="checkbox" />
+            <span class="slider round"></span>
+          </label>
+        </div>
+        <button id="generateBtn" class="primary"
+          style="font-size:18px; margin-left:auto; padding:14px 28px; border-radius:999px;" disabled>
           Generate Samples
         </button>
       </div>
     </section>
 
     <!-- 5) Effects -->
-    <section class="panel">
-      <div class="section-title">
-        <h2>Effects</h2>
-      </div>
+    <section class="panel" id="effectsPanel">
       <div id="presetGrid" class="preset-grid"></div>
     </section>
   </main>
@@ -711,6 +825,23 @@
     const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
     const lerp = (a, b, t) => a + (b - a) * t;
     function sampleLinear(chData, pos) { const i = Math.floor(pos), f = pos - i; const i2 = Math.min(chData.length - 1, i + 1); return lerp(chData[i] || 0, chData[i2] || 0, f); }
+    // Higher-quality interpolation (4-point cubic Hermite)
+    function sampleCubic(chData, pos) {
+      const i = Math.floor(pos);
+      const frac = pos - i;
+
+      const y0 = chData[i - 1] || 0;
+      const y1 = chData[i] || 0;
+      const y2 = chData[i + 1] || 0;
+      const y3 = chData[i + 2] || 0;
+
+      const a = (-0.5 * y0) + (1.5 * y1) - (1.5 * y2) + (0.5 * y3);
+      const b = y0 - (2.5 * y1) + (2 * y2) - (0.5 * y3);
+      const c = (-0.5 * y0) + (0.5 * y2);
+      const d = y1;
+
+      return a * frac * frac * frac + b * frac * frac + c * frac + d;
+    }
     function secToX(sec, duration, width) { const ratio = duration ? (sec / duration) : 0; return Math.round(clamp(ratio, 0, 1) * (width - 1)); }
     function xToSec(x, duration, width) { const ratio = x / (width - 1); return ratio * (duration || 0); }
 
@@ -1165,96 +1296,97 @@
     }
 
     async function renderEffectToBuffer(preset) {
-  if (!sampleBuffer) throw new Error('No sample loaded or recorded.');
+      if (!sampleBuffer) throw new Error('No sample loaded or recorded.');
 
-  const bpm = parseFloat(bpmEl.value || '120');
-  const beatDur = 60 / (isFinite(bpm) ? bpm : 120);
-  const beats = parseInt(preset.duration, 10) || 1;
-  const scratchDur = beatDur * beats;
+      const bpm = parseFloat(bpmEl.value || '120');
+      const beatDur = 60 / (isFinite(bpm) ? bpm : 120);
+      const beats = parseInt(preset.duration, 10) || 1;
+      const scratchDur = beatDur * beats;
 
-  const sr = sampleBuffer.sampleRate;
-  const scratchSamples = Math.max(1, Math.floor(scratchDur * sr));
-  const scratchCurve = curveFromFormula(preset.scratchFormula, scratchSamples, -1, 1);
-  const gainCurve = curveFromFormula(preset.gainFormula, scratchSamples, 0, 1);
+      const oversample = 2; // try 2x or 4x
+      const sr = sampleBuffer.sampleRate * oversample;
+      const scratchSamples = Math.max(1, Math.floor(scratchDur * sr));
+      const scratchCurve = curveFromFormula(preset.scratchFormula, scratchSamples, -1, 1);
+      const gainCurve = curveFromFormula(preset.gainFormula, scratchSamples, 0, 1);
 
-  const sStart = Math.floor(clipStart * sr);
-  const sEnd = Math.floor(clipEnd * sr);
-  const sLen = Math.max(1, sEnd - sStart);
+      const sStart = Math.floor(clipStart * sr);
+      const sEnd = Math.floor(clipEnd * sr);
+      const sLen = Math.max(1, sEnd - sStart);
 
-  const outLen = scratchSamples;
-  let out = new AudioBuffer({
-    length: outLen,
-    numberOfChannels: sampleBuffer.numberOfChannels,
-    sampleRate: sr
-  });
+      const outLen = scratchSamples;
+      let out = new AudioBuffer({
+        length: outLen,
+        numberOfChannels: sampleBuffer.numberOfChannels,
+        sampleRate: sr
+      });
 
-  let lastPos = sStart;
+      let lastPos = sStart;
 
-  for (let ch = 0; ch < out.numberOfChannels; ch++) {
-    const inData = sampleBuffer.getChannelData(ch);
-    const outData = out.getChannelData(ch);
+      for (let ch = 0; ch < out.numberOfChannels; ch++) {
+        const inData = sampleBuffer.getChannelData(ch);
+        const outData = out.getChannelData(ch);
 
-    // --- Scratch part ---
-    for (let i = 0; i < scratchSamples; i++) {
-      const u = (scratchCurve[i] + 1) * 0.5;
-      const srcPos = sStart + u * (sLen - 1);
-      lastPos = srcPos;
-      const v = sampleLinear(inData, srcPos);
-      outData[i] = v * gainCurve[i];
-    }
+        // --- Scratch part ---
+        for (let i = 0; i < scratchSamples; i++) {
+          const u = (scratchCurve[i] + 1) * 0.5;
+          const srcPos = sStart + u * (sLen - 1);
+          lastPos = srcPos;
+          const v = sampleCubic(inData, srcPos);
+          outData[i] = v * gainCurve[i];
+        }
 
-    if (scratchSamples > 0) {
-      const v = sampleLinear(inData, lastPos);
-      outData[scratchSamples - 1] = v * gainCurve[scratchSamples - 1];
-    }
+        if (scratchSamples > 0) {
+          const v = sampleCubic(inData, lastPos);
+          outData[scratchSamples - 1] = v * gainCurve[scratchSamples - 1];
+        }
 
-    // Fade in/out
-    const fadeSamples = Math.floor(sr * 0.003);
-    for (let i = 0; i < fadeSamples; i++) {
-      const t = i / fadeSamples;
-      outData[i] *= t;
-      const j = outData.length - 1 - i;
-      if (j >= 0) outData[j] *= t;
-    }
-  }
-
-  // === Slip Mode continuation ===
-  if (slipModeEl.checked) {
-    const slipRemaining = Math.max(0, sampleBuffer.length - Math.floor(lastPos));
-    const slipSamples = slipRemaining;
-
-    const extended = new AudioBuffer({
-      length: out.length + slipSamples,
-      numberOfChannels: out.numberOfChannels,
-      sampleRate: sr
-    });
-
-    // Copy scratch part
-    for (let c = 0; c < out.numberOfChannels; c++) {
-      extended.getChannelData(c).set(out.getChannelData(c), 0);
-    }
-
-    // Fill slip continuation
-    for (let c = 0; c < out.numberOfChannels; c++) {
-      const inData = sampleBuffer.getChannelData(c);
-      const extData = extended.getChannelData(c);
-      let pos = Math.floor(lastPos);
-      for (let i = 0; i < slipSamples; i++) {
-        extData[out.length + i] = inData[pos + i] || 0;
+        // Fade in/out
+        const fadeSamples = Math.floor(sr * 0.025);
+        for (let i = 0; i < fadeSamples; i++) {
+          const t = i / fadeSamples;
+          outData[i] *= t;
+          const j = outData.length - 1 - i;
+          if (j >= 0) outData[j] *= t;
+        }
       }
+
+      // === Slip Mode continuation ===
+      if (slipModeEl.checked) {
+        const slipRemaining = Math.max(0, sampleBuffer.length - Math.floor(lastPos));
+        const slipSamples = slipRemaining;
+
+        const extended = new AudioBuffer({
+          length: out.length + slipSamples,
+          numberOfChannels: out.numberOfChannels,
+          sampleRate: sr
+        });
+
+        // Copy scratch part
+        for (let c = 0; c < out.numberOfChannels; c++) {
+          extended.getChannelData(c).set(out.getChannelData(c), 0);
+        }
+
+        // Fill slip continuation
+        for (let c = 0; c < out.numberOfChannels; c++) {
+          const inData = sampleBuffer.getChannelData(c);
+          const extData = extended.getChannelData(c);
+          let pos = Math.floor(lastPos);
+          for (let i = 0; i < slipSamples; i++) {
+            extData[out.length + i] = inData[pos + i] || 0;
+          }
+        }
+
+        out = extended;
+      }
+
+      const offline = new OfflineAudioContext(out.numberOfChannels, out.length, out.sampleRate);
+      const src = offline.createBufferSource();
+      src.buffer = out;
+      src.connect(offline.destination);
+      src.start();
+      const rendered = await offline.startRendering();
+      return rendered;
     }
-
-    out = extended;
-  }
-
-  const offline = new OfflineAudioContext(out.numberOfChannels, out.length, out.sampleRate);
-  const src = offline.createBufferSource();
-  src.buffer = out;
-  src.connect(offline.destination);
-  src.start();
-  const rendered = await offline.startRendering();
-  return rendered;
-}
 
     // ==== Presets
     let presets = [
@@ -1317,75 +1449,75 @@
     }
 
     function synthesizePreviewBuffer(preset) {
-  if (!sampleBuffer) return null;
+      if (!sampleBuffer) return null;
 
-  const bpm = parseFloat(bpmEl.value || '120');
-  const beatDur = 60 / (isFinite(bpm) ? bpm : 120);
-  const beats = parseInt(preset.duration, 10) || 1;
-  const scratchDur = beatDur * beats;
+      const bpm = parseFloat(bpmEl.value || '120');
+      const beatDur = 60 / (isFinite(bpm) ? bpm : 120);
+      const beats = parseInt(preset.duration, 10) || 1;
+      const scratchDur = beatDur * beats;
 
-  const sr = sampleBuffer.sampleRate;
-  const scratchSamples = Math.max(1, Math.floor(scratchDur * sr));
-  const scratchCurve = curveFromFormula(preset.scratchFormula, scratchSamples, -1, 1);
-  const gainCurve = curveFromFormula(preset.gainFormula, scratchSamples, 0, 1);
+      const sr = sampleBuffer.sampleRate;
+      const scratchSamples = Math.max(1, Math.floor(scratchDur * sr));
+      const scratchCurve = curveFromFormula(preset.scratchFormula, scratchSamples, -1, 1);
+      const gainCurve = curveFromFormula(preset.gainFormula, scratchSamples, 0, 1);
 
-  const sStart = Math.floor(clipStart * sr);
-  const sEnd = Math.floor(clipEnd * sr);
-  const sLen = Math.max(1, sEnd - sStart);
+      const sStart = Math.floor(clipStart * sr);
+      const sEnd = Math.floor(clipEnd * sr);
+      const sLen = Math.max(1, sEnd - sStart);
 
-  let out = new AudioBuffer({ length: scratchSamples, numberOfChannels: 1, sampleRate: sr });
-  const inData = sampleBuffer.getChannelData(0);
-  const outData = out.getChannelData(0);
+      let out = new AudioBuffer({ length: scratchSamples, numberOfChannels: 1, sampleRate: sr });
+      const inData = sampleBuffer.getChannelData(0);
+      const outData = out.getChannelData(0);
 
-  let lastPos = sStart;
+      let lastPos = sStart;
 
-  // Scratch part
-  for (let i = 0; i < scratchSamples; i++) {
-    const u = (scratchCurve[i] + 1) * 0.5;
-    const srcPos = sStart + u * (sLen - 1);
-    lastPos = srcPos;
-    const v = sampleLinear(inData, srcPos);
-    outData[i] = v * gainCurve[i];
-  }
+      // Scratch part
+      for (let i = 0; i < scratchSamples; i++) {
+        const u = (scratchCurve[i] + 1) * 0.5;
+        const srcPos = sStart + u * (sLen - 1);
+        lastPos = srcPos;
+        const v = sampleCubic(inData, srcPos);
+        outData[i] = v * gainCurve[i];
+      }
 
-  if (scratchSamples > 0) {
-    const v = sampleLinear(inData, lastPos);
-    outData[scratchSamples - 1] = v * gainCurve[scratchSamples - 1];
-  }
+      if (scratchSamples > 0) {
+        const v = sampleCubic(inData, lastPos);
+        outData[scratchSamples - 1] = v * gainCurve[scratchSamples - 1];
+      }
 
-  // Fade in/out
-  const fadeSamples = Math.floor(sr * 0.003);
-  for (let i = 0; i < fadeSamples; i++) {
-    const t = i / fadeSamples;
-    outData[i] *= t;
-    const j = outData.length - 1 - i;
-    if (j >= 0) outData[j] *= t;
-  }
+      // Fade in/out
+      const fadeSamples = Math.floor(sr * 0.025);
+      for (let i = 0; i < fadeSamples; i++) {
+        const t = i / fadeSamples;
+        outData[i] *= t;
+        const j = outData.length - 1 - i;
+        if (j >= 0) outData[j] *= t;
+      }
 
-  // === Slip Mode continuation ===
-  if (slipModeEl.checked) {
-    const slipRemaining = Math.max(0, sampleBuffer.length - Math.floor(lastPos));
-    const slipSamples = slipRemaining;
+      // === Slip Mode continuation ===
+      if (slipModeEl.checked) {
+        const slipRemaining = Math.max(0, sampleBuffer.length - Math.floor(lastPos));
+        const slipSamples = slipRemaining;
 
-    const extended = new AudioBuffer({
-      length: out.length + slipSamples,
-      numberOfChannels: 1,
-      sampleRate: sr
-    });
+        const extended = new AudioBuffer({
+          length: out.length + slipSamples,
+          numberOfChannels: 1,
+          sampleRate: sr
+        });
 
-    extended.getChannelData(0).set(out.getChannelData(0), 0);
+        extended.getChannelData(0).set(out.getChannelData(0), 0);
 
-    let pos = Math.floor(lastPos);
-    const extData = extended.getChannelData(0);
-    for (let i = 0; i < slipSamples; i++) {
-      extData[out.length + i] = inData[pos + i] || 0;
+        let pos = Math.floor(lastPos);
+        const extData = extended.getChannelData(0);
+        for (let i = 0; i < slipSamples; i++) {
+          extData[out.length + i] = inData[pos + i] || 0;
+        }
+
+        out = extended;
+      }
+
+      return out;
     }
-
-    out = extended;
-  }
-
-  return out;
-}
 
     async function updatePresetThumbnails() {
 
@@ -1423,7 +1555,10 @@
 
         const src = audioCtx.createBufferSource();
         src.buffer = rendered;
-        src.connect(audioCtx.destination);
+        const filter = audioCtx.createBiquadFilter();
+        filter.type = "lowpass";
+        filter.frequency.setValueAtTime(12000, audioCtx.currentTime); // cutoff ~12kHz
+        src.connect(filter).connect(audioCtx.destination);
 
         src.onended = () => {
           presetSrc = null;
