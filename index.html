@@ -1303,8 +1303,7 @@
       const beats = parseInt(preset.duration, 10) || 1;
       const scratchDur = beatDur * beats;
 
-      const oversample = 2; // try 2x or 4x
-      const sr = sampleBuffer.sampleRate * oversample;
+      const sr = sampleBuffer.sampleRate;
       const scratchSamples = Math.max(1, Math.floor(scratchDur * sr));
       const scratchCurve = curveFromFormula(preset.scratchFormula, scratchSamples, -1, 1);
       const gainCurve = curveFromFormula(preset.gainFormula, scratchSamples, 0, 1);
