@@ -61,7 +61,7 @@
       max-width: 1100px;
       margin: 0 auto;
       padding-right: 20px;
-      padding-bottom: 100px;
+      padding-bottom: 20px;
       padding-left: 20px;
       display: grid;
       gap: 14px;
@@ -337,7 +337,7 @@
       display: flex;
       flex-wrap: wrap;
       align-items: center;
-      gap: 20px;
+      column-gap: 20px;
     }
 
     .field label {
@@ -659,7 +659,7 @@
 
     /* Settings panel (no shadow, flat bottom) */
     #settingsPanel {
-      margin-bottom: -20px;
+      margin-bottom: -15px;
       /* overlap into Effects */
       border-bottom-left-radius: 0;
       border-bottom-right-radius: 0;
@@ -685,7 +685,7 @@
 
     /* Load Panel */
     #loadPanel {
-      margin-bottom: -20px;
+      margin-bottom: -15px;
       /* pull it closer to Pre panel */
       border-bottom-left-radius: 0;
       /* flatten bottom corners */
@@ -715,6 +715,45 @@
       /* Startwaarde voor grootte (pas aan) */
       height: auto;
       /* Aspect ratio behouden */
+    }
+
+    @media (max-width: 600px) {
+      #generateBtn {
+        display: block;
+        /* takes full row */
+        margin: 14px auto 0;
+        /* centers horizontally */
+      }
+    }
+
+    @media (max-width: 600px) {
+      .section-title {
+        flex-direction: column;
+        align-items: initial;
+      }
+    }
+
+    footer {
+      text-align: center;
+      font-size: 14px;
+      color: var(--muted);
+      padding: 30px 10px;
+      border-top: 1px solid var(--line);
+      margin-top: 40px;
+    }
+
+    footer a {
+      color: var(--muted);
+      /* same gray tone as the footer text */
+      text-decoration: none;
+      /* remove underline */
+    }
+
+    footer a:hover {
+      color: var(--accent);
+      /* green accent on hover */
+      text-decoration: underline;
+      /* optional: subtle underline */
     }
   </style>
 </head>
@@ -753,7 +792,7 @@
 
     <section class="panel" id="prePanel">
       <div class="section-title">
-        <h2 id="fileSubtitle">Prepare Sample</h2>
+        <h2 id="fileSubtitle"></h2>
         <div class="row">
           <button id="reloadSampleBtn" class="tiny pill ghost" disabled>Reset</button>
           <button id="commitPreBtn" class="tiny pill primary" disabled>Cut Sample</button>
@@ -778,8 +817,8 @@
       <canvas id="waveCanvas" width="900" height="160" aria-label="Scratching waveform"></canvas>
       <div class="handles">
         <span>Start: <span id="clipStartLbl">0.00s</span></span>
-        <span class="center">Length: <span id="clipLenLbl" class="value">0.15s</span></span>
-        <span>End: <span id="clipEndLbl">0.15s</span></span>
+        <span class="center">Length: <span id="clipLenLbl" class="value">0.10s</span></span>
+        <span>End: <span id="clipEndLbl">0.10s</span></span>
       </div>
     </section>
 
@@ -801,7 +840,8 @@
           </label>
         </div>
         <button id="generateBtn" class="primary"
-          style="font-size:18px; margin-left:auto; padding:14px 28px; border-radius:999px;" disabled>
+          style="font-size:18px; margin-left:auto; padding:14px 100px; border-radius:999px; font-family: Oswald, sans-serif;"
+          disabled>
           Generate Samples
         </button>
       </div>
@@ -831,6 +871,10 @@
     <div class="bubble-container" id="bubbleContainer"></div>
   </div>
 
+  <footer>
+    © 2025. <a href="https://carpaudio.com/" title="">CARP Audio</a>. All rights reserved.
+  </footer>
+
   <script>
     const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 
@@ -840,7 +884,7 @@
     let sampleFileName = '';
 
     let preStart = 0, preEnd = 0;
-    let clipStart = 0, clipEnd = 0.15;
+    let clipStart = 0, clipEnd = 0.10;
 
     let rafId = null;
     let playhead = { active: false, startAt: 0, duration: 0, where: 'none', canvas: null, miniIdx: -1 };
@@ -1060,7 +1104,7 @@
       sampleFileName = name || 'Sample';
       fileSubtitle.textContent = sampleFileName;
       preStart = 0; preEnd = sampleBuffer.duration;
-      clipStart = 0; clipEnd = Math.min(0.15, sampleBuffer.duration);
+      clipStart = 0; clipEnd = Math.min(0.10, sampleBuffer.duration);
       recStatus.textContent = `Sample: ${sampleBuffer.duration.toFixed(2)}s @ ${sampleBuffer.sampleRate} Hz`;
       prePlayBtn.disabled = false; commitPreBtn.disabled = false; reloadSampleBtn.disabled = false;
       generateBtn.disabled = false;
@@ -1205,7 +1249,7 @@
       if (!sampleBuffer) return;
       const chs = sampleBuffer.numberOfChannels; const sr = sampleBuffer.sampleRate; const len = Math.max(1, Math.floor((preEnd - preStart) * sr)); const newBuf = new AudioBuffer({ length: len, numberOfChannels: chs, sampleRate: sr });
       for (let ch = 0; ch < chs; ch++) { const inData = sampleBuffer.getChannelData(ch); const outData = newBuf.getChannelData(ch); const startIdx = Math.floor(preStart * sr); for (let i = 0; i < len; i++) { outData[i] = inData[startIdx + i] || 0; } }
-      sampleBuffer = newBuf; preStart = 0; preEnd = sampleBuffer.duration; clipStart = 0; clipEnd = Math.min(0.15, sampleBuffer.duration);
+      sampleBuffer = newBuf; preStart = 0; preEnd = sampleBuffer.duration; clipStart = 0; clipEnd = Math.min(0.10, sampleBuffer.duration);
       drawPreWave(); drawMainWave(); updateLabels(); globalStatus.textContent = 'Preselection applied as new sample';
     };
 
@@ -1215,7 +1259,7 @@
       preStart = 0;
       preEnd = sampleBuffer.duration;
       clipStart = 0;
-      clipEnd = Math.min(0.15, sampleBuffer.duration);
+      clipEnd = Math.min(0.10, sampleBuffer.duration);
 
       drawPreWave();
       drawMainWave();
