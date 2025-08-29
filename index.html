@@ -11,7 +11,7 @@
   <style>
     :root {
       --bg: #0e0e0e;
-      --panel: #1e211f4A;
+      --panel: #1e211f28;
       --panel-elev: #222523;
       --line: #2a2a2a;
       --text: #f1f1f1;
@@ -286,7 +286,7 @@
 
     canvas {
       width: 100%;
-      background: #0a0a0a;
+      background: #121212;
       border: 1px solid var(--line);
       border-radius: 10px;
       height: 160px;
@@ -296,7 +296,7 @@
     /* Preselection – smaller, subtle */
     #preCanvas {
       height: 80px;
-      background: #0a0a0a;
+      background: #121212;
       cursor: crosshair;
     }
 
@@ -430,13 +430,13 @@
     .mini-wrap {
       border-radius: 10px;
       overflow: hidden;
-      background: #0a0a0a;
+      background: #121212;
     }
 
     .mini-wave {
       width: 100%;
       height: 60px;
-      background: #0a0a0a;
+      background: #121212;
       display: block;
     }
 
@@ -450,7 +450,7 @@
       position: relative;
       border: 1px solid #2a2a2a;
       border-radius: 10px;
-      background: #0a0a0a;
+      background: #121212;
       padding: 8px;
     }
 
@@ -973,7 +973,9 @@
       const dpr = fitCanvasToDisplay(preCanvas);
       const Wp = preCanvas.width, Hp = preCanvas.height;
       preCtx.clearRect(0, 0, Wp, Hp);
-      preCtx.fillStyle = '#0a0a0a';
+      preCtx.fillStyle = '#121212';
+      waveCtx.shadowColor = '#22c55e4A';
+      waveCtx.shadowBlur = 8; 
       preCtx.fillRect(0, 0, Wp, Hp);
       if (!sampleBuffer) return;
 
@@ -1019,13 +1021,15 @@
       const dpr = fitCanvasToDisplay(waveCanvas);
       const Wc = waveCanvas.width, Hc = waveCanvas.height;
       waveCtx.clearRect(0, 0, Wc, Hc);
-      waveCtx.fillStyle = '#000'; waveCtx.fillRect(0, 0, Wc, Hc);
+      waveCtx.fillStyle = '#121212'; waveCtx.fillRect(0, 0, Wc, Hc);
       if (!sampleBuffer) return;
 
       const data = sampleBuffer.getChannelData(0);
       const step = Math.max(1, Math.floor(data.length / Wc));
       waveCtx.strokeStyle = '#16a34a';
       waveCtx.lineWidth = Math.max(1, dpr);
+      waveCtx.shadowColor = '#22c55e4A';
+      waveCtx.shadowBlur = 8; 
       waveCtx.beginPath();
       for (let x = 0; x < Wc; x++) { const v = data[x * step] || 0; const y = (1 - (v + 1) / 2) * Hc; if (x === 0) waveCtx.moveTo(x, y); else waveCtx.lineTo(x, y); }
       waveCtx.stroke();
@@ -1063,11 +1067,13 @@
       const ctx = canvas.getContext('2d');
       const w = canvas.width, h = canvas.height;
       ctx.clearRect(0, 0, w, h);
-      ctx.fillStyle = '#0a0a0a'; ctx.fillRect(0, 0, w, h);
+      ctx.fillStyle = '#121212'; ctx.fillRect(0, 0, w, h);
       if (!buffer) return;
       const data = buffer.getChannelData(0);
       const step = Math.max(1, Math.floor(data.length / w));
       ctx.strokeStyle = '#16a34a'; ctx.lineWidth = Math.max(1, dpr);
+      ctx.shadowColor = '#22c55e4A';
+      ctx.shadowBlur = 8; 
       ctx.beginPath();
       for (let x = 0; x < w; x++) { const v = data[x * step] || 0; const y = (1 - (v + 1) / 2) * h; if (x === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y); }
       ctx.stroke();
@@ -1079,7 +1085,7 @@
       const ctx = canvas.getContext('2d');
       const w = canvas.width, h = canvas.height;
       ctx.clearRect(0, 0, w, h);
-      ctx.fillStyle = '#0a0a0a'; ctx.fillRect(0, 0, w, h);
+      ctx.fillStyle = '#121212'; ctx.fillRect(0, 0, w, h);
       if (!arr) return;
       ctx.strokeStyle = '#22c55e'; ctx.lineWidth = Math.max(1, dpr);
       ctx.beginPath();
