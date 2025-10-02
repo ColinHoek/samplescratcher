@@ -344,7 +344,6 @@
       font-size: 13px;
       color: var(--muted);
       display: inline-block;
-      margin-bottom: 6px;
     }
 
     /* Green themed slider */
@@ -483,19 +482,54 @@
     }
 
     .preset-card .pname,
-    .preset-card .meta b {
+    .preset-card .meta b,
+    .preset-card .duration {
       opacity: 0.4;
-      /* start lichter/vaag */
       color: var(--muted);
-      /* begin in grijs */
       transition: color 0.6s ease, opacity 0.6s ease;
     }
 
     .preset-card.enabled .pname,
-    .preset-card.enabled .meta b {
+    .preset-card.enabled .meta b,
+    .preset-card.enabled .duration {
       opacity: 1;
       color: #fff;
-      /* naar wit wanneer enabled */
+    }
+
+    .beat-icon img.beat-svg {
+      height: auto;
+      width: 22px;
+      opacity: 0.2;
+      transition: opacity 0.6s ease;
+    }
+
+    .preset-card.enabled .beat-icon img.beat-svg {
+      opacity: 0.7;
+    }
+
+    .preset-card .beat-count {
+      font-weight: 700;
+      font-size: 13px;
+      letter-spacing: 0.5px;
+      opacity: 0.4;
+      color: #4d4d4d;
+      transition: color 0.6s ease, opacity 0.6s ease;
+    }
+
+    .preset-card.enabled .beat-count {
+      opacity: 1;
+      color: #8b8b8b;
+    }
+
+    .preset-card .meta {
+      opacity: 0.4;
+      color: #4d4d4d;
+      transition: color 0.6s ease, opacity 0.6s ease;
+    }
+
+    .preset-card.enabled .meta {
+      opacity: 1;
+      color: #8b8b8b;
     }
 
     .preset-card canvas {
@@ -629,14 +663,15 @@
     }
 
     .switch-label {
+      height: 40px;
       font-size: 16px;
-      font-weight: 600;
       font-family: Oswald, sans-serif;
       letter-spacing: .3px;
     }
 
     /* Switch styling */
     .switch {
+      height: 40px;
       position: relative;
       display: inline-block;
       width: 50px;
@@ -853,8 +888,8 @@
         <h2>Sample Generation</h2>
       </div>
       <div class="settings-row">
-        <div class="field">
-          <span class="switch-label">BPM</span>
+        <div class="field switch-field">
+          <span style=" padding:7px" class="switch-label">BPM</span>
           <input id="bpm" type="number" value="120" min="40" max="300" step="1" />
         </div>
         <div class="field switch-field">
@@ -867,12 +902,12 @@
         <div class="field switch-field">
           <span style="padding:7px" class="switch-label">Vinyl Noise</span>
           <label class="switch">
-            <input id="vinylNoise" type="checkbox" />
+            <input id="vinylNoise" type="checkbox" checked />
             <span class="slider round"></span>
           </label>
         </div>
         <button id="generateBtn" class="primary"
-          style="font-size:18px; margin-left:auto; padding:14px 100px; border-radius:999px; font-family: Oswald, sans-serif;"
+          style="font-size:20px; margin-left:auto; padding:10px 90px 10px 90px; border-radius:999px; font-family: Oswald, sans-serif;"
           disabled>
           Generate Samples
         </button>
@@ -887,11 +922,16 @@
 
   <template id="presetCardTpl">
     <div class="preset-card">
-      <h3 class="pname"></h3>
+      <div class="section-title">
+        <h3 class="pname"></h3>
+        <span class="beat-icon"></span>
+      </div>
       <div class="mini-wrap">
         <canvas class="mini-wave" width="300" height="54"></canvas>
       </div>
-      <div class="meta"><span>Duration: <b class="beats">1 beat</b></span></div>
+      <div class="meta">
+        Duration: <span class="duration"></span>
+      </div>
       <div class="preset-actions">
         <button class="playBtn primary">Play</button>
         <button class="dlBtn btn-ghost">Download</button>
@@ -966,7 +1006,7 @@
 
     // Vinyl Noise
     const vinylNoiseEl = document.getElementById('vinylNoise');
-    const VINYL_NOISE_VOLUME = 0.15; // hardcoded: lager = subtieler
+    const VINYL_NOISE_VOLUME = 0.25; // hardcoded: lager = subtieler
 
     let noiseBuffers = [];
 
@@ -1159,6 +1199,7 @@
 
       // random noise sample
       const noise = noiseBuffers[Math.floor(Math.random() * noiseBuffers.length)];
+      const noiseOffset = Math.floor(Math.random() * noise.length);
 
       // nieuwe buffer voor mix
       const mixed = audioCtx.createBuffer(
@@ -1173,7 +1214,7 @@
         const mixedData = mixed.getChannelData(ch);
 
         for (let i = 0; i < mainBuffer.length; i++) {
-          const n = noiseData[i % noise.length]; // loop noise
+          const n = noiseData[(i + noiseOffset) % noise.length]; // random start
           mixedData[i] = mainData[i] + (n * VINYL_NOISE_VOLUME);
         }
       }
@@ -1556,7 +1597,7 @@
         }
 
         // Fade in/out (anti-click)
-        const fadeSamples = Math.floor(sr * 0.025);
+        const fadeSamples = Math.floor(sr * 0.05);
         for (let i = 0; i < fadeSamples; i++) {
           const t = i / fadeSamples;
           outData[i] *= t;
@@ -1626,123 +1667,142 @@
     }
 
     async function renderPresetGrid(forceRedrawWaves = false) {
-  presetGrid.innerHTML = '';
-  presets.forEach((p, idx) => {
-    const node = presetCardTpl.content.cloneNode(true);
-    node.querySelector('.pname').textContent = p.name;
-    node.querySelector('.beats').textContent = `${p.duration} beat(s)`;
-    const card = node.querySelector('.preset-card');
-    const mini = node.querySelector('.mini-wave');
-    const playBtn = node.querySelector('.playBtn');
-    const dlBtn = node.querySelector('.dlBtn');
+      presetGrid.innerHTML = '';
 
-    // eerst leeg tekenen (optioneel: grijs placeholder)
-    drawMiniFromBuffer(mini, null);
+      presets.forEach((p, idx) => {
+        const node = presetCardTpl.content.cloneNode(true);
+        node.querySelector('.pname').textContent = p.name;
+        const beats = parseInt(p.duration, 10) || 1;
+        node.querySelector('.beat-icon').innerHTML = `
+  <img src="icons/beat-${beats}.svg" alt="${beats} beat" class="beat-svg">
+`;
 
-    playBtn.addEventListener('click', async () => { 
-      await handlePlayPreset(idx, playBtn, mini); 
-    });
-    dlBtn.addEventListener('click', async () => { 
-      await handleDownloadPreset(idx); 
-    });
-    mini.addEventListener('click', async () => { 
-      await handlePlayPreset(idx, playBtn, mini); 
-    });
+        // toon echte duur als buffer al gerenderd is
+        if (presetBuffers[idx]) {
+          node.querySelector('.duration').textContent =
+            `${presetBuffers[idx].duration.toFixed(2)}s`;
+        } else {
+          // fallback: bereken uit BPM en beats
+          const bpm = parseFloat(bpmEl.value || '120');
+          const beatDur = 60 / (isFinite(bpm) ? bpm : 120);
+          node.querySelector('.duration').textContent =
+            `${(beatDur * p.duration).toFixed(2)}s`;
+        }
 
-    presetGrid.appendChild(node);
-  });
-}
+        const mini = node.querySelector('.mini-wave');
+
+        if (sampleBuffer) {
+          const preview = synthesizePreviewBuffer(p);
+          drawMiniFromBuffer(mini, preview, null);
+        }
+
+        const playBtn = node.querySelector('.playBtn');
+        const dlBtn = node.querySelector('.dlBtn');
+
+        playBtn.addEventListener('click', async () => {
+          await handlePlayPreset(idx, playBtn, mini);
+        });
+        dlBtn.addEventListener('click', async () => {
+          await handleDownloadPreset(idx);
+        });
+        mini.addEventListener('click', async () => {
+          await handlePlayPreset(idx, playBtn, mini);
+        });
+
+        presetGrid.appendChild(node);
+      });
+    }
 
     function synthesizePreviewBuffer(preset) {
-  if (!sampleBuffer) return null;
+      if (!sampleBuffer) return null;
 
-  const bpm = parseFloat(bpmEl.value || '120');
-  const beatDur = 60 / (isFinite(bpm) ? bpm : 120);
-  const beats = parseInt(preset.duration, 10) || 1;
-  const scratchDur = beatDur * beats;
+      const bpm = parseFloat(bpmEl.value || '120');
+      const beatDur = 60 / (isFinite(bpm) ? bpm : 120);
+      const beats = parseInt(preset.duration, 10) || 1;
+      const scratchDur = beatDur * beats;
 
-  const sr = sampleBuffer.sampleRate;
-  const scratchSamples = Math.max(1, Math.floor(scratchDur * sr));
-  const scratchCurve = curveFromFormula(preset.scratchFormula, scratchSamples, -1, 1);
-  const gainCurve = curveFromFormula(preset.gainFormula, scratchSamples, 0, 1);
+      const sr = sampleBuffer.sampleRate;
+      const scratchSamples = Math.max(1, Math.floor(scratchDur * sr));
+      const scratchCurve = curveFromFormula(preset.scratchFormula, scratchSamples, -1, 1);
+      const gainCurve = curveFromFormula(preset.gainFormula, scratchSamples, 0, 1);
 
-  const sStart = Math.floor(clipStart * sr);
-  const sEnd = Math.floor(clipEnd * sr);
-  const sLen = Math.max(1, sEnd - sStart);
+      const sStart = Math.floor(clipStart * sr);
+      const sEnd = Math.floor(clipEnd * sr);
+      const sLen = Math.max(1, sEnd - sStart);
 
-  // === Stap 1: scratchInput bouwen (sample + noise) ===
-  let scratchInput = sampleBuffer;
-  if (vinylNoiseEl.checked && noiseBuffers.length > 0) {
-    const noise = noiseBuffers[Math.floor(Math.random() * noiseBuffers.length)];
-    scratchInput = audioCtx.createBuffer(
-      sampleBuffer.numberOfChannels,
-      sampleBuffer.length,
-      sampleBuffer.sampleRate
-    );
-    for (let ch = 0; ch < sampleBuffer.numberOfChannels; ch++) {
-      const mainData = sampleBuffer.getChannelData(ch);
-      const noiseData = noise.getChannelData(Math.min(ch, noise.numberOfChannels - 1));
-      const scratchData = scratchInput.getChannelData(ch);
-      for (let i = 0; i < sampleBuffer.length; i++) {
-        const n = noiseData[i % noise.length];
-        scratchData[i] = mainData[i] + (n * VINYL_NOISE_VOLUME);
+      // === Stap 1: scratchInput bouwen (sample + noise) ===
+      let scratchInput = sampleBuffer;
+      if (vinylNoiseEl.checked && noiseBuffers.length > 0) {
+        const noise = noiseBuffers[Math.floor(Math.random() * noiseBuffers.length)];
+        scratchInput = audioCtx.createBuffer(
+          sampleBuffer.numberOfChannels,
+          sampleBuffer.length,
+          sampleBuffer.sampleRate
+        );
+        for (let ch = 0; ch < sampleBuffer.numberOfChannels; ch++) {
+          const mainData = sampleBuffer.getChannelData(ch);
+          const noiseData = noise.getChannelData(Math.min(ch, noise.numberOfChannels - 1));
+          const scratchData = scratchInput.getChannelData(ch);
+          for (let i = 0; i < sampleBuffer.length; i++) {
+            const n = noiseData[i % noise.length];
+            scratchData[i] = mainData[i] + (n * VINYL_NOISE_VOLUME);
+          }
+        }
       }
-    }
-  }
 
-  // === Stap 2: scratch uitvoeren met scratchInput ===
-  let out = audioCtx.createBuffer(
-    scratchInput.numberOfChannels,
-    scratchSamples,
-    sr
-  );
+      // === Stap 2: scratch uitvoeren met scratchInput ===
+      let out = audioCtx.createBuffer(
+        scratchInput.numberOfChannels,
+        scratchSamples,
+        sr
+      );
 
-  let lastPos = sStart;
+      let lastPos = sStart;
 
-  for (let ch = 0; ch < out.numberOfChannels; ch++) {
-    const inData = scratchInput.getChannelData(ch);
-    const outData = out.getChannelData(ch);
+      for (let ch = 0; ch < out.numberOfChannels; ch++) {
+        const inData = scratchInput.getChannelData(ch);
+        const outData = out.getChannelData(ch);
 
-    for (let i = 0; i < scratchSamples; i++) {
-      const u = (scratchCurve[i] + 1) * 0.5;
-      const srcPos = sStart + u * (sLen - 1);
-      lastPos = srcPos;
-      const v = sampleCubic(inData, srcPos);
-      outData[i] = v * gainCurve[i];
-    }
-  }
-
-  // === Stap 3: Slip Mode continuation (ook in preview!) ===
-  if (slipModeEl.checked) {
-    const slipRemaining = Math.max(0, scratchInput.length - Math.floor(lastPos));
-    const slipSamples = slipRemaining;
-
-    const extended = audioCtx.createBuffer(
-      out.numberOfChannels,
-      out.length + slipSamples,
-      sr
-    );
-
-    // Copy scratch part
-    for (let c = 0; c < out.numberOfChannels; c++) {
-      extended.getChannelData(c).set(out.getChannelData(c), 0);
-    }
-
-    // Fill slip continuation
-    for (let c = 0; c < out.numberOfChannels; c++) {
-      const inData = scratchInput.getChannelData(c);
-      const extData = extended.getChannelData(c);
-      let pos = Math.floor(lastPos);
-      for (let i = 0; i < slipSamples; i++) {
-        extData[out.length + i] = inData[pos + i] || 0;
+        for (let i = 0; i < scratchSamples; i++) {
+          const u = (scratchCurve[i] + 1) * 0.5;
+          const srcPos = sStart + u * (sLen - 1);
+          lastPos = srcPos;
+          const v = sampleCubic(inData, srcPos);
+          outData[i] = v * gainCurve[i];
+        }
       }
+
+      // === Stap 3: Slip Mode continuation (ook in preview!) ===
+      if (slipModeEl.checked) {
+        const slipRemaining = Math.max(0, scratchInput.length - Math.floor(lastPos));
+        const slipSamples = slipRemaining;
+
+        const extended = audioCtx.createBuffer(
+          out.numberOfChannels,
+          out.length + slipSamples,
+          sr
+        );
+
+        // Copy scratch part
+        for (let c = 0; c < out.numberOfChannels; c++) {
+          extended.getChannelData(c).set(out.getChannelData(c), 0);
+        }
+
+        // Fill slip continuation
+        for (let c = 0; c < out.numberOfChannels; c++) {
+          const inData = scratchInput.getChannelData(c);
+          const extData = extended.getChannelData(c);
+          let pos = Math.floor(lastPos);
+          for (let i = 0; i < slipSamples; i++) {
+            extData[out.length + i] = inData[pos + i] || 0;
+          }
+        }
+
+        out = extended;
+      }
+
+      return out;
     }
-
-    out = extended;
-  }
-
-  return out;
-}
 
     async function updatePresetThumbnails() {
 
@@ -1844,58 +1904,45 @@
     init();
 
     generateBtn.addEventListener('click', async () => {
-  presetGrid.innerHTML = '';
-  presetBuffers = [];
+      // reset buffers
+      presetBuffers = [];
 
-  // 1. Render eerst alle buffers
-  for (let i = 0; i < presets.length; i++) {
-    try {
-      const buf = await renderEffectToBuffer(presets[i]);
-      presetBuffers[i] = buf;
-    } catch (err) {
-      console.error("Preset render failed:", err);
-      presetBuffers[i] = null;
-    }
-  }
+      // eerst echt renderen (met noise/slip/random)
+      for (let i = 0; i < presets.length; i++) {
+        try {
+          const rendered = await renderEffectToBuffer(presets[i]);
+          presetBuffers[i] = rendered;
+        } catch (err) {
+          presetBuffers[i] = null;
+          console.error("Preset render failed:", err);
+        }
+      }
 
-  // 2. Nu grid tekenen met echte buffers
-  presets.forEach((p, i) => {
-    const node = presetCardTpl.content.cloneNode(true);
-    node.querySelector('.pname').textContent = p.name;
-    node.querySelector('.beats').textContent = `${p.duration} beat(s)`;
-    const card = node.querySelector('.preset-card');
-    const mini = node.querySelector('.mini-wave');
-    const playBtn = node.querySelector('.playBtn');
-    const dlBtn = node.querySelector('.dlBtn');
+      // pas hier UI tekenen met exacte buffers
+      renderPresetGrid();
 
-    // teken direct de echte buffer
-    drawMiniFromBuffer(mini, presetBuffers[i]);
+      // previews tekenen op basis van de echte buffers
+      presetGrid.querySelectorAll('.preset-card').forEach((card, idx) => {
+        const mini = card.querySelector('.mini-wave');
+        if (presetBuffers[idx]) {
+          drawMiniFromBuffer(mini, presetBuffers[idx]);
+        }
+      });
 
-    playBtn.addEventListener('click', async () => { 
-      await handlePlayPreset(i, playBtn, mini); 
+      // enable animaties
+      requestAnimationFrame(() => {
+        document.querySelectorAll('.preset-actions').forEach((el, idx) => {
+          setTimeout(() => el.classList.add('enabled'), idx * 100);
+        });
+      });
+
+      requestAnimationFrame(() => {
+        document.querySelectorAll('.preset-card').forEach((el, idx) => {
+          setTimeout(() => el.classList.add('enabled'), idx * 100);
+        });
+      });
     });
-    dlBtn.addEventListener('click', async () => { 
-      await handleDownloadPreset(i); 
-    });
-    mini.addEventListener('click', async () => { 
-      await handlePlayPreset(i, playBtn, mini); 
-    });
 
-    presetGrid.appendChild(node);
-  });
-
-  // 3. Animatie na render
-  requestAnimationFrame(() => {
-    document.querySelectorAll('.preset-actions').forEach((el, idx) => {
-      setTimeout(() => el.classList.add('enabled'), idx * 100);
-    });
-  });
-  requestAnimationFrame(() => {
-    document.querySelectorAll('.preset-card').forEach((el, idx) => {
-      setTimeout(() => el.classList.add('enabled'), idx * 100);
-    });
-  });
-});
 
     const bubbleContainer = document.getElementById("bubbleContainer");
 
