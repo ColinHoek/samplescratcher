@@ -1595,14 +1595,7 @@
       }
 
       // === Stap 4: render in OfflineAudioContext ===
-      const offline = new OfflineAudioContext(out.numberOfChannels, out.length, out.sampleRate);
-      const src = offline.createBufferSource();
-      src.buffer = out;
-      src.connect(offline.destination);
-      src.start();
-      const rendered = await offline.startRendering();
-
-      return rendered;
+      return out;
     }
 
     // ==== Presets
