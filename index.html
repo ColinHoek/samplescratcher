@@ -1848,38 +1848,40 @@
   presetGrid.innerHTML = '';
 
   for (let i = 0; i < presets.length; i++) {
+    const node = presetCardTpl.content.cloneNode(true);
+    node.querySelector('.pname').textContent = presets[i].name;
+    node.querySelector('.beats').textContent = `${presets[i].duration} beat(s)`;
+    const card = node.querySelector('.preset-card');
+    const mini = node.querySelector('.mini-wave');
+    const playBtn = node.querySelector('.playBtn');
+    const dlBtn = node.querySelector('.dlBtn');
+
+    // Eerst een placeholder preview tekenen (grijs)
+    drawMiniFromBuffer(mini, null);
+
+    // Genereer buffer async
     try {
       const buf = await renderEffectToBuffer(presets[i]);
       presetBuffers[i] = buf;
-
-      // UI element maken
-      const node = presetCardTpl.content.cloneNode(true);
-      node.querySelector('.pname').textContent = presets[i].name;
-      node.querySelector('.beats').textContent = `${presets[i].duration} beat(s)`;
-      const card = node.querySelector('.preset-card');
-      const mini = node.querySelector('.mini-wave');
-      const playBtn = node.querySelector('.playBtn');
-      const dlBtn = node.querySelector('.dlBtn');
-
-      // mini tekenen vanuit de echte buffer
+      // Zodra klaar → mini tekenen vanuit buffer
       drawMiniFromBuffer(mini, buf);
-
-      playBtn.addEventListener('click', async () => { 
-        await handlePlayPreset(i, playBtn, mini); 
-      });
-      dlBtn.addEventListener('click', async () => { 
-        await handleDownloadPreset(i); 
-      });
-      mini.addEventListener('click', async () => { 
-        await handlePlayPreset(i, playBtn, mini); 
-      });
-
-      presetGrid.appendChild(node);
-
     } catch (err) {
       console.error("Preset render failed:", err);
       presetBuffers[i] = null;
     }
+
+    // Knoppen koppelen
+    playBtn.addEventListener('click', async () => { 
+      await handlePlayPreset(i, playBtn, mini); 
+    });
+    dlBtn.addEventListener('click', async () => { 
+      await handleDownloadPreset(i); 
+    });
+    mini.addEventListener('click', async () => { 
+      await handlePlayPreset(i, playBtn, mini); 
+    });
+
+    presetGrid.appendChild(node);
   }
 
   // Enable knoppen/cards met animatie
@@ -1894,7 +1896,6 @@
     });
   });
 });
-
 
     const bubbleContainer = document.getElementById("bubbleContainer");
 
