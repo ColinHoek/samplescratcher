@@ -861,6 +861,13 @@
             <span class="slider round"></span>
           </label>
         </div>
+        <div class="field switch-field">
+  <span style="padding:7px" class="switch-label">Vinyl Noise</span>
+  <label class="switch">
+    <input id="vinylNoise" type="checkbox" />
+    <span class="slider round"></span>
+  </label>
+</div>
         <button id="generateBtn" class="primary"
           style="font-size:18px; margin-left:auto; padding:14px 100px; border-radius:999px; font-family: Oswald, sans-serif;"
           disabled>
@@ -953,6 +960,10 @@
     const presetCardTpl = document.getElementById('presetCardTpl');
 
     const generateBtn = document.getElementById('generateBtn');
+
+    const vinylNoiseEl = document.getElementById('vinylNoise');
+
+    const VINYL_NOISE_GAIN = 0.3;  // 0.0 = uit, 1.0 = gelijk aan hoofdvolume
 
     // ==== helpers
     const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
@@ -1434,6 +1445,14 @@
       return arr;
     }
 
+    async function loadRandomNoiseBuffer() {
+  const idx = Math.floor(Math.random() * 11) + 1; // 1–11
+  const fname = `noise/noise${String(idx).padStart(2, "0")}.wav`;
+  const res = await fetch(fname);
+  const arr = await res.arrayBuffer();
+  return await audioCtx.decodeAudioData(arr);
+}
+
     async function renderEffectToBuffer(preset) {
       if (!sampleBuffer) throw new Error('No sample loaded or recorded.');
 
@@ -1697,11 +1716,34 @@ function init() {
         filter.frequency.setValueAtTime(12000, audioCtx.currentTime); // cutoff ~12kHz
         src.connect(filter).connect(audioCtx.destination);
 
-        src.onended = () => {
-          presetSrc = null;
-          stopPlayhead();
-          buttonEl.textContent = 'Play';
-        };
+let noiseSrc = null;
+if (vinylNoiseEl.checked) {
+  const noiseGain = audioCtx.createGain();
+  noiseGain.gain.value = VINYL_NOISE_GAIN;
+
+  try {
+    const noiseBuf = await loadRandomNoiseBuffer();
+    noiseSrc = audioCtx.createBufferSource();
+    noiseSrc.buffer = noiseBuf;
+    noiseSrc.loop = true;
+    noiseSrc.connect(noiseGain).connect(audioCtx.destination);
+    noiseSrc.start();
+  } catch (e) {
+    console.error("Noise load failed:", e);
+  }
+}
+
+src.onended = () => {
+  presetSrc = null;
+  stopPlayhead();
+  buttonEl.textContent = 'Play';
+
+  // Stop de noise ook
+  if (noiseSrc) {
+    try { noiseSrc.stop(); } catch {}
+    noiseSrc = null;
+  }
+};
 
         src.start();
         presetSrc = src;
