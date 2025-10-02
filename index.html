@@ -1626,36 +1626,32 @@
     }
 
     async function renderPresetGrid(forceRedrawWaves = false) {
-      presetGrid.innerHTML = '';
-      presets.forEach((p, idx) => {
-        const node = presetCardTpl.content.cloneNode(true);
-        node.querySelector('.pname').textContent = p.name;
-        node.querySelector('.beats').textContent = `${p.duration} beat(s)`;
-        const card = node.querySelector('.preset-card');
-        const mini = node.querySelector('.mini-wave');
-        const cScratch = node.querySelector('.curve-scratch');
-        const cGain = node.querySelector('.curve-gain');
-        const playBtn = node.querySelector('.playBtn');
-        const dlBtn = node.querySelector('.dlBtn');
+  presetGrid.innerHTML = '';
+  presets.forEach((p, idx) => {
+    const node = presetCardTpl.content.cloneNode(true);
+    node.querySelector('.pname').textContent = p.name;
+    node.querySelector('.beats').textContent = `${p.duration} beat(s)`;
+    const card = node.querySelector('.preset-card');
+    const mini = node.querySelector('.mini-wave');
+    const playBtn = node.querySelector('.playBtn');
+    const dlBtn = node.querySelector('.dlBtn');
 
-        // initial curves + mini waveform prerender
-        const sr = sampleBuffer?.sampleRate || 44100;
-        const bpm = parseFloat(bpmEl.value || '120');
-        const beatDur = 60 / (isFinite(bpm) ? bpm : 120);
-        const samples = Math.max(1, Math.floor((beatDur * (parseInt(p.duration) || 1)) * sr));
+    // eerst leeg tekenen (optioneel: grijs placeholder)
+    drawMiniFromBuffer(mini, null);
 
-        if (sampleBuffer) {
-          const preview = synthesizePreviewBuffer(p);
-          drawMiniFromBuffer(mini, preview, null);
-        }
+    playBtn.addEventListener('click', async () => { 
+      await handlePlayPreset(idx, playBtn, mini); 
+    });
+    dlBtn.addEventListener('click', async () => { 
+      await handleDownloadPreset(idx); 
+    });
+    mini.addEventListener('click', async () => { 
+      await handlePlayPreset(idx, playBtn, mini); 
+    });
 
-        playBtn.addEventListener('click', async () => { const i = idx; await handlePlayPreset(i, playBtn, mini); });
-        dlBtn.addEventListener('click', async () => { const i = idx; await handleDownloadPreset(i); });
-        mini.addEventListener('click', async () => { await handlePlayPreset(idx, playBtn, mini); });
-
-        presetGrid.appendChild(node);
-      });
-    }
+    presetGrid.appendChild(node);
+  });
+}
 
     function synthesizePreviewBuffer(preset) {
   if (!sampleBuffer) return null;
@@ -1848,34 +1844,56 @@
     init();
 
     generateBtn.addEventListener('click', async () => {
-      renderPresetGrid(true);
-      updatePresetThumbnails();
+  presetBuffers = [];
+  presetGrid.innerHTML = '';
 
-      // cache rendered buffers
-      presetBuffers = [];
-      for (let i = 0; i < presets.length; i++) {
-        try {
-          const rendered = await renderEffectToBuffer(presets[i]);
-          presetBuffers[i] = rendered;
-        } catch (err) {
-          presetBuffers[i] = null;
-          console.error("Preset render failed:", err);
-        }
-      }
+  for (let i = 0; i < presets.length; i++) {
+    try {
+      const buf = await renderEffectToBuffer(presets[i]);
+      presetBuffers[i] = buf;
 
-      // Enable buttons with animation
-      requestAnimationFrame(() => {
-        document.querySelectorAll('.preset-actions').forEach((el, idx) => {
-          setTimeout(() => el.classList.add('enabled'), idx * 100); // stagger enable
-        });
+      // UI element maken
+      const node = presetCardTpl.content.cloneNode(true);
+      node.querySelector('.pname').textContent = presets[i].name;
+      node.querySelector('.beats').textContent = `${presets[i].duration} beat(s)`;
+      const card = node.querySelector('.preset-card');
+      const mini = node.querySelector('.mini-wave');
+      const playBtn = node.querySelector('.playBtn');
+      const dlBtn = node.querySelector('.dlBtn');
+
+      // mini tekenen vanuit de echte buffer
+      drawMiniFromBuffer(mini, buf);
+
+      playBtn.addEventListener('click', async () => { 
+        await handlePlayPreset(i, playBtn, mini); 
+      });
+      dlBtn.addEventListener('click', async () => { 
+        await handleDownloadPreset(i); 
+      });
+      mini.addEventListener('click', async () => { 
+        await handlePlayPreset(i, playBtn, mini); 
       });
 
-      requestAnimationFrame(() => {
-        document.querySelectorAll('.preset-card').forEach((el, idx) => {
-          setTimeout(() => el.classList.add('enabled'), idx * 100); // stagger enable
-        });
-      });
+      presetGrid.appendChild(node);
+
+    } catch (err) {
+      console.error("Preset render failed:", err);
+      presetBuffers[i] = null;
+    }
+  }
+
+  // Enable knoppen/cards met animatie
+  requestAnimationFrame(() => {
+    document.querySelectorAll('.preset-actions').forEach((el, idx) => {
+      setTimeout(() => el.classList.add('enabled'), idx * 100);
     });
+  });
+  requestAnimationFrame(() => {
+    document.querySelectorAll('.preset-card').forEach((el, idx) => {
+      setTimeout(() => el.classList.add('enabled'), idx * 100);
+    });
+  });
+});
 
 
     const bubbleContainer = document.getElementById("bubbleContainer");
