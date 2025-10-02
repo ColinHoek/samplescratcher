@@ -1844,33 +1844,33 @@
     init();
 
     generateBtn.addEventListener('click', async () => {
-  presetBuffers = [];
   presetGrid.innerHTML = '';
+  presetBuffers = [];
 
+  // 1. Render eerst alle buffers
   for (let i = 0; i < presets.length; i++) {
+    try {
+      const buf = await renderEffectToBuffer(presets[i]);
+      presetBuffers[i] = buf;
+    } catch (err) {
+      console.error("Preset render failed:", err);
+      presetBuffers[i] = null;
+    }
+  }
+
+  // 2. Nu grid tekenen met echte buffers
+  presets.forEach((p, i) => {
     const node = presetCardTpl.content.cloneNode(true);
-    node.querySelector('.pname').textContent = presets[i].name;
-    node.querySelector('.beats').textContent = `${presets[i].duration} beat(s)`;
+    node.querySelector('.pname').textContent = p.name;
+    node.querySelector('.beats').textContent = `${p.duration} beat(s)`;
     const card = node.querySelector('.preset-card');
     const mini = node.querySelector('.mini-wave');
     const playBtn = node.querySelector('.playBtn');
     const dlBtn = node.querySelector('.dlBtn');
 
-    // Eerst een placeholder preview tekenen (grijs)
-    drawMiniFromBuffer(mini, null);
+    // teken direct de echte buffer
+    drawMiniFromBuffer(mini, presetBuffers[i]);
 
-    // Genereer buffer async
-    try {
-      const buf = await renderEffectToBuffer(presets[i]);
-      presetBuffers[i] = buf;
-      // Zodra klaar → mini tekenen vanuit buffer
-      drawMiniFromBuffer(mini, buf);
-    } catch (err) {
-      console.error("Preset render failed:", err);
-      presetBuffers[i] = null;
-    }
-
-    // Knoppen koppelen
     playBtn.addEventListener('click', async () => { 
       await handlePlayPreset(i, playBtn, mini); 
     });
@@ -1882,9 +1882,9 @@
     });
 
     presetGrid.appendChild(node);
-  }
+  });
 
-  // Enable knoppen/cards met animatie
+  // 3. Animatie na render
   requestAnimationFrame(() => {
     document.querySelectorAll('.preset-actions').forEach((el, idx) => {
       setTimeout(() => el.classList.add('enabled'), idx * 100);
