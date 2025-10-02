@@ -1534,11 +1534,23 @@ async function loadPresets() {
     const res = await fetch("scratches.json");
     presets = await res.json();
     console.log("Scratch curves loaded:", presets);
-    // After loading, initialize your UI
-    renderPresets();
+
+    // Now initialize UI only after presets exist
+    init();
   } catch (err) {
     console.error("Failed to load scratch curves:", err);
   }
+}
+
+function init() {
+  fitCanvasToDisplay(preCanvas);
+  fitCanvasToDisplay(waveCanvas);
+  drawPreWave();
+  drawMainWave();
+  updateLabels();
+  renderPresetGrid();   // <-- now this has data
+  recControls.classList.add('idle');
+  setPreBtnState('play');
 }
 
     async function renderPresetGrid(forceRedrawWaves = false) {
