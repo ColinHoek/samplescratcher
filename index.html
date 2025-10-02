@@ -961,9 +961,11 @@
 
     const generateBtn = document.getElementById('generateBtn');
 
-    const vinylNoiseEl = document.getElementById('vinylNoise');
+    // Vinyl Noise
+const vinylNoiseEl = document.getElementById('vinylNoise');
+const VINYL_NOISE_VOLUME = 0.15; // hardcoded: lager = subtieler
 
-    const VINYL_NOISE_GAIN = 0.25; // 0.0 = uit, 1.0 = net zo hard als sample
+let noiseBuffers = [];
 
     // ==== helpers
     const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
@@ -1136,12 +1138,43 @@
       if (text) ctx.fillText(text, 10 * dpr, 18 * dpr);
     }
 
-    async function loadRandomNoiseBuffer() {
-  const idx = Math.floor(Math.random() * 11) + 1; // 1–11
-  const fname = `noise/noise${String(idx).padStart(2, "0")}.wav`;
-  const res = await fetch(fname);
-  const arr = await res.arrayBuffer();
-  return await audioCtx.decodeAudioData(arr);
+    async function loadNoiseBuffers() {
+  const bufs = [];
+  for (let i = 1; i <= 11; i++) {
+    const url = `noise/noise${String(i).padStart(2, '0')}.wav`;
+    const res = await fetch(url);
+    const arr = await res.arrayBuffer();
+    const buf = await audioCtx.decodeAudioData(arr);
+    bufs.push(buf);
+  }
+  noiseBuffers = bufs;
+  console.log("Loaded noise samples:", noiseBuffers.length);
+}
+
+function mixWithNoise(mainBuffer) {
+  if (!vinylNoiseEl.checked || noiseBuffers.length === 0) return mainBuffer;
+
+  // random noise sample
+  const noise = noiseBuffers[Math.floor(Math.random() * noiseBuffers.length)];
+
+  // nieuwe buffer voor mix
+  const mixed = audioCtx.createBuffer(
+    mainBuffer.numberOfChannels,
+    mainBuffer.length,
+    mainBuffer.sampleRate
+  );
+
+  for (let ch = 0; ch < mainBuffer.numberOfChannels; ch++) {
+    const mainData = mainBuffer.getChannelData(ch);
+    const noiseData = noise.getChannelData(Math.min(ch, noise.numberOfChannels-1));
+    const mixedData = mixed.getChannelData(ch);
+
+    for (let i = 0; i < mainBuffer.length; i++) {
+      const n = noiseData[i % noise.length]; // loop noise
+      mixedData[i] = mainData[i] + (n * VINYL_NOISE_VOLUME);
+    }
+  }
+  return mixed;
 }
 
     // ==== load / record
@@ -1453,105 +1486,100 @@
       return arr;
     }
 
-    // ==== RENDER TO BUFFER (main) ====
-async function renderEffectToBuffer(preset) {
-  if (!sampleBuffer) throw new Error('No sample loaded or recorded.');
+    async function renderEffectToBuffer(preset) {
+      if (!sampleBuffer) throw new Error('No sample loaded or recorded.');
 
-  const bpm = parseFloat(bpmEl.value || '120');
-  const beatDur = 60 / (isFinite(bpm) ? bpm : 120);
-  const beats = parseInt(preset.duration, 10) || 1;
-  const scratchDur = beatDur * beats;
+      const bpm = parseFloat(bpmEl.value || '120');
+      const beatDur = 60 / (isFinite(bpm) ? bpm : 120);
+      const beats = parseInt(preset.duration, 10) || 1;
+      const scratchDur = beatDur * beats;
 
-  const sr = sampleBuffer.sampleRate;
-  const scratchSamples = Math.max(1, Math.floor(scratchDur * sr));
-  const scratchCurve = curveFromFormula(preset.scratchFormula, scratchSamples, -1, 1);
-  const gainCurve = curveFromFormula(preset.gainFormula, scratchSamples, 0, 1);
+      const sr = sampleBuffer.sampleRate;
+      const scratchSamples = Math.max(1, Math.floor(scratchDur * sr));
+      const scratchCurve = curveFromFormula(preset.scratchFormula, scratchSamples, -1, 1);
+      const gainCurve = curveFromFormula(preset.gainFormula, scratchSamples, 0, 1);
 
-  const sStart = Math.floor(clipStart * sr);
-  const sEnd = Math.floor(clipEnd * sr);
-  const sLen = Math.max(1, sEnd - sStart);
+      const sStart = Math.floor(clipStart * sr);
+      const sEnd = Math.floor(clipEnd * sr);
+      const sLen = Math.max(1, sEnd - sStart);
 
-  const outLen = scratchSamples;
-  let out = new AudioBuffer({
-    length: outLen,
-    numberOfChannels: sampleBuffer.numberOfChannels,
-    sampleRate: sr
-  });
+      const outLen = scratchSamples;
+      let out = new AudioBuffer({
+        length: outLen,
+        numberOfChannels: sampleBuffer.numberOfChannels,
+        sampleRate: sr
+      });
 
-  let lastPos = sStart;
+      let lastPos = sStart;
 
-  for (let ch = 0; ch < out.numberOfChannels; ch++) {
-    const inData = sampleBuffer.getChannelData(ch);
-    const outData = out.getChannelData(ch);
+      for (let ch = 0; ch < out.numberOfChannels; ch++) {
+        const inData = sampleBuffer.getChannelData(ch);
+        const outData = out.getChannelData(ch);
 
-    for (let i = 0; i < scratchSamples; i++) {
-      const u = (scratchCurve[i] + 1) * 0.5;
-      const srcPos = sStart + u * (sLen - 1);
-      lastPos = srcPos;
+        // --- Scratch part ---
+        for (let i = 0; i < scratchSamples; i++) {
+          const u = (scratchCurve[i] + 1) * 0.5;
+          const srcPos = sStart + u * (sLen - 1);
+          lastPos = srcPos;
+          const v = sampleCubic(inData, srcPos);
+          outData[i] = v * gainCurve[i];
+        }
 
-      // === COMBINE AUDIO + VINYL NOISE BEFORE SCRATCH ===
-      const v = sampleCubic(inData, srcPos);
-      const noise = (Math.random() * 2 - 1) * 0.02; // subtiele ruis
-      const vinyl = v + noise;
+        if (scratchSamples > 0) {
+          const v = sampleCubic(inData, lastPos);
+          outData[scratchSamples - 1] = v * gainCurve[scratchSamples - 1];
+        }
 
-      outData[i] = vinyl * gainCurve[i];
-    }
-
-    // correct laatste sample
-    if (scratchSamples > 0) {
-      const v = sampleCubic(inData, lastPos);
-      const noise = (Math.random() * 2 - 1) * 0.02;
-      outData[scratchSamples - 1] = (v + noise) * gainCurve[scratchSamples - 1];
-    }
-
-    // Fade in/out
-    const fadeSamples = Math.floor(sr * 0.025);
-    for (let i = 0; i < fadeSamples; i++) {
-      const t = i / fadeSamples;
-      outData[i] *= t;
-      const j = outData.length - 1 - i;
-      if (j >= 0) outData[j] *= t;
-    }
-  }
-
-  // === Slip Mode continuation ===
-  if (slipModeEl.checked) {
-    const slipRemaining = Math.max(0, sampleBuffer.length - Math.floor(lastPos));
-    const slipSamples = slipRemaining;
-
-    const extended = new AudioBuffer({
-      length: out.length + slipSamples,
-      numberOfChannels: out.numberOfChannels,
-      sampleRate: sr
-    });
-
-    for (let c = 0; c < out.numberOfChannels; c++) {
-      extended.getChannelData(c).set(out.getChannelData(c), 0);
-    }
-
-    for (let c = 0; c < out.numberOfChannels; c++) {
-      const inData = sampleBuffer.getChannelData(c);
-      const extData = extended.getChannelData(c);
-      let pos = Math.floor(lastPos);
-      for (let i = 0; i < slipSamples; i++) {
-        const v = inData[pos + i] || 0;
-        const noise = (Math.random() * 2 - 1) * 0.02;
-        extData[out.length + i] = v + noise;
+        // Fade in/out
+        const fadeSamples = Math.floor(sr * 0.025);
+        for (let i = 0; i < fadeSamples; i++) {
+          const t = i / fadeSamples;
+          outData[i] *= t;
+          const j = outData.length - 1 - i;
+          if (j >= 0) outData[j] *= t;
+        }
       }
+
+      // === Slip Mode continuation ===
+      if (slipModeEl.checked) {
+        const slipRemaining = Math.max(0, sampleBuffer.length - Math.floor(lastPos));
+        const slipSamples = slipRemaining;
+
+        const extended = new AudioBuffer({
+          length: out.length + slipSamples,
+          numberOfChannels: out.numberOfChannels,
+          sampleRate: sr
+        });
+
+        // Copy scratch part
+        for (let c = 0; c < out.numberOfChannels; c++) {
+          extended.getChannelData(c).set(out.getChannelData(c), 0);
+        }
+
+        // Fill slip continuation
+        for (let c = 0; c < out.numberOfChannels; c++) {
+          const inData = sampleBuffer.getChannelData(c);
+          const extData = extended.getChannelData(c);
+          let pos = Math.floor(lastPos);
+          for (let i = 0; i < slipSamples; i++) {
+            extData[out.length + i] = inData[pos + i] || 0;
+          }
+        }
+
+        out = extended;
+      }
+
+      const offline = new OfflineAudioContext(out.numberOfChannels, out.length, out.sampleRate);
+      const src = offline.createBufferSource();
+      src.buffer = out;
+      src.connect(offline.destination);
+      src.start();
+      const rendered = await offline.startRendering();
+
+// === Vinyl Noise toevoegen ===
+return mixWithNoise(rendered);
     }
 
-    out = extended;
-  }
-
-  // render via OfflineAudioContext (voor WebAudio consistency)
-  const offline = new OfflineAudioContext(out.numberOfChannels, out.length, out.sampleRate);
-  const src = offline.createBufferSource();
-  src.buffer = out;
-  src.connect(offline.destination);
-  src.start();
-  const rendered = await offline.startRendering();
-  return rendered;
-}
     // ==== Presets
     let presets = [];
 
@@ -1611,83 +1639,76 @@ function init() {
       });
     }
 
-    // ==== PREVIEW SYNTHESIS (mini-wave) ====
-function synthesizePreviewBuffer(preset) {
-  if (!sampleBuffer) return null;
+    function synthesizePreviewBuffer(preset) {
+      if (!sampleBuffer) return null;
 
-  const bpm = parseFloat(bpmEl.value || '120');
-  const beatDur = 60 / (isFinite(bpm) ? bpm : 120);
-  const beats = parseInt(preset.duration, 10) || 1;
-  const scratchDur = beatDur * beats;
+      const bpm = parseFloat(bpmEl.value || '120');
+      const beatDur = 60 / (isFinite(bpm) ? bpm : 120);
+      const beats = parseInt(preset.duration, 10) || 1;
+      const scratchDur = beatDur * beats;
 
-  const sr = sampleBuffer.sampleRate;
-  const scratchSamples = Math.max(1, Math.floor(scratchDur * sr));
-  const scratchCurve = curveFromFormula(preset.scratchFormula, scratchSamples, -1, 1);
-  const gainCurve = curveFromFormula(preset.gainFormula, scratchSamples, 0, 1);
+      const sr = sampleBuffer.sampleRate;
+      const scratchSamples = Math.max(1, Math.floor(scratchDur * sr));
+      const scratchCurve = curveFromFormula(preset.scratchFormula, scratchSamples, -1, 1);
+      const gainCurve = curveFromFormula(preset.gainFormula, scratchSamples, 0, 1);
 
-  const sStart = Math.floor(clipStart * sr);
-  const sEnd = Math.floor(clipEnd * sr);
-  const sLen = Math.max(1, sEnd - sStart);
+      const sStart = Math.floor(clipStart * sr);
+      const sEnd = Math.floor(clipEnd * sr);
+      const sLen = Math.max(1, sEnd - sStart);
 
-  let out = new AudioBuffer({ length: scratchSamples, numberOfChannels: 1, sampleRate: sr });
-  const inData = sampleBuffer.getChannelData(0);
-  const outData = out.getChannelData(0);
+      let out = new AudioBuffer({ length: scratchSamples, numberOfChannels: 1, sampleRate: sr });
+      const inData = sampleBuffer.getChannelData(0);
+      const outData = out.getChannelData(0);
 
-  let lastPos = sStart;
+      let lastPos = sStart;
 
-  for (let i = 0; i < scratchSamples; i++) {
-    const u = (scratchCurve[i] + 1) * 0.5;
-    const srcPos = sStart + u * (sLen - 1);
-    lastPos = srcPos;
+      // Scratch part
+      for (let i = 0; i < scratchSamples; i++) {
+        const u = (scratchCurve[i] + 1) * 0.5;
+        const srcPos = sStart + u * (sLen - 1);
+        lastPos = srcPos;
+        const v = sampleCubic(inData, srcPos);
+        outData[i] = v * gainCurve[i];
+      }
 
-    const v = sampleCubic(inData, srcPos);
-    const noise = (Math.random() * 2 - 1) * 0.02;
-    const vinyl = v + noise;
+      if (scratchSamples > 0) {
+        const v = sampleCubic(inData, lastPos);
+        outData[scratchSamples - 1] = v * gainCurve[scratchSamples - 1];
+      }
 
-    outData[i] = vinyl * gainCurve[i];
-  }
+      // Fade in/out
+      const fadeSamples = Math.floor(sr * 0.025);
+      for (let i = 0; i < fadeSamples; i++) {
+        const t = i / fadeSamples;
+        outData[i] *= t;
+        const j = outData.length - 1 - i;
+        if (j >= 0) outData[j] *= t;
+      }
 
-  if (scratchSamples > 0) {
-    const v = sampleCubic(inData, lastPos);
-    const noise = (Math.random() * 2 - 1) * 0.02;
-    outData[scratchSamples - 1] = (v + noise) * gainCurve[scratchSamples - 1];
-  }
+      // === Slip Mode continuation ===
+      if (slipModeEl.checked) {
+        const slipRemaining = Math.max(0, sampleBuffer.length - Math.floor(lastPos));
+        const slipSamples = slipRemaining;
 
-  // Fade in/out
-  const fadeSamples = Math.floor(sr * 0.025);
-  for (let i = 0; i < fadeSamples; i++) {
-    const t = i / fadeSamples;
-    outData[i] *= t;
-    const j = outData.length - 1 - i;
-    if (j >= 0) outData[j] *= t;
-  }
+        const extended = new AudioBuffer({
+          length: out.length + slipSamples,
+          numberOfChannels: 1,
+          sampleRate: sr
+        });
 
-  // Slip Mode
-  if (slipModeEl.checked) {
-    const slipRemaining = Math.max(0, sampleBuffer.length - Math.floor(lastPos));
-    const slipSamples = slipRemaining;
+        extended.getChannelData(0).set(out.getChannelData(0), 0);
 
-    const extended = new AudioBuffer({
-      length: out.length + slipSamples,
-      numberOfChannels: 1,
-      sampleRate: sr
-    });
+        let pos = Math.floor(lastPos);
+        const extData = extended.getChannelData(0);
+        for (let i = 0; i < slipSamples; i++) {
+          extData[out.length + i] = inData[pos + i] || 0;
+        }
 
-    extended.getChannelData(0).set(out.getChannelData(0), 0);
+        out = extended;
+      }
 
-    let pos = Math.floor(lastPos);
-    const extData = extended.getChannelData(0);
-    for (let i = 0; i < slipSamples; i++) {
-      const v = inData[pos + i] || 0;
-      const noise = (Math.random() * 2 - 1) * 0.02;
-      extData[out.length + i] = v + noise;
+      return out;
     }
-
-    out = extended;
-  }
-
-  return out;
-}
 
     async function updatePresetThumbnails() {
 
@@ -1850,6 +1871,7 @@ function synthesizePreviewBuffer(preset) {
     // Elke 2 seconden een bubble maken
     setInterval(createBubble, 2000);
 
+    loadNoiseBuffers();
     loadPresets();
   </script>
 </body>
