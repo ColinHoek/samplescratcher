@@ -482,27 +482,30 @@
       width: 100%;
     }
 
-.preset-card .pname,
-.preset-card .meta b {
-  opacity: 0.4;             /* start lichter/vaag */
-  color: var(--muted);      /* begin in grijs */
-  transition: color 0.6s ease, opacity 0.6s ease;
-}
+    .preset-card .pname,
+    .preset-card .meta b {
+      opacity: 0.4;
+      /* start lichter/vaag */
+      color: var(--muted);
+      /* begin in grijs */
+      transition: color 0.6s ease, opacity 0.6s ease;
+    }
 
-.preset-card.enabled .pname,
-.preset-card.enabled .meta b {
-  opacity: 1;
-  color: #fff;              /* naar wit wanneer enabled */
-}
+    .preset-card.enabled .pname,
+    .preset-card.enabled .meta b {
+      opacity: 1;
+      color: #fff;
+      /* naar wit wanneer enabled */
+    }
 
-.preset-card canvas {
-  opacity: 0.3; 
-  transition: opacity 0.6s ease;
-}
+    .preset-card canvas {
+      opacity: 0.3;
+      transition: opacity 0.6s ease;
+    }
 
-.preset-card.enabled canvas {
-  opacity: 1;
-}
+    .preset-card.enabled canvas {
+      opacity: 1;
+    }
 
     .btn-ghost {
       background: #141414;
@@ -862,12 +865,12 @@
           </label>
         </div>
         <div class="field switch-field">
-  <span style="padding:7px" class="switch-label">Vinyl Noise</span>
-  <label class="switch">
-    <input id="vinylNoise" type="checkbox" />
-    <span class="slider round"></span>
-  </label>
-</div>
+          <span style="padding:7px" class="switch-label">Vinyl Noise</span>
+          <label class="switch">
+            <input id="vinylNoise" type="checkbox" />
+            <span class="slider round"></span>
+          </label>
+        </div>
         <button id="generateBtn" class="primary"
           style="font-size:18px; margin-left:auto; padding:14px 100px; border-radius:999px; font-family: Oswald, sans-serif;"
           disabled>
@@ -962,10 +965,10 @@
     const generateBtn = document.getElementById('generateBtn');
 
     // Vinyl Noise
-const vinylNoiseEl = document.getElementById('vinylNoise');
-const VINYL_NOISE_VOLUME = 0.15; // hardcoded: lager = subtieler
+    const vinylNoiseEl = document.getElementById('vinylNoise');
+    const VINYL_NOISE_VOLUME = 0.15; // hardcoded: lager = subtieler
 
-let noiseBuffers = [];
+    let noiseBuffers = [];
 
     // ==== helpers
     const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
@@ -1010,7 +1013,7 @@ let noiseBuffers = [];
       preCtx.clearRect(0, 0, Wp, Hp);
       preCtx.fillStyle = '#121212';
       waveCtx.shadowColor = '#22c55e4A';
-      waveCtx.shadowBlur = 8; 
+      waveCtx.shadowBlur = 8;
       preCtx.fillRect(0, 0, Wp, Hp);
       if (!sampleBuffer) return;
 
@@ -1064,7 +1067,7 @@ let noiseBuffers = [];
       waveCtx.strokeStyle = '#16a34a';
       waveCtx.lineWidth = Math.max(1, dpr);
       waveCtx.shadowColor = '#22c55e4A';
-      waveCtx.shadowBlur = 8; 
+      waveCtx.shadowBlur = 8;
       waveCtx.beginPath();
       for (let x = 0; x < Wc; x++) { const v = data[x * step] || 0; const y = (1 - (v + 1) / 2) * Hc; if (x === 0) waveCtx.moveTo(x, y); else waveCtx.lineTo(x, y); }
       waveCtx.stroke();
@@ -1108,7 +1111,7 @@ let noiseBuffers = [];
       const step = Math.max(1, Math.floor(data.length / w));
       ctx.strokeStyle = '#16a34a'; ctx.lineWidth = Math.max(1, dpr);
       ctx.shadowColor = '#22c55e4A';
-      ctx.shadowBlur = 8; 
+      ctx.shadowBlur = 8;
       ctx.beginPath();
       for (let x = 0; x < w; x++) { const v = data[x * step] || 0; const y = (1 - (v + 1) / 2) * h; if (x === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y); }
       ctx.stroke();
@@ -1139,43 +1142,43 @@ let noiseBuffers = [];
     }
 
     async function loadNoiseBuffers() {
-  const bufs = [];
-  for (let i = 1; i <= 11; i++) {
-    const url = `noise/noise${String(i).padStart(2, '0')}.wav`;
-    const res = await fetch(url);
-    const arr = await res.arrayBuffer();
-    const buf = await audioCtx.decodeAudioData(arr);
-    bufs.push(buf);
-  }
-  noiseBuffers = bufs;
-  console.log("Loaded noise samples:", noiseBuffers.length);
-}
-
-function mixWithNoise(mainBuffer) {
-  if (!vinylNoiseEl.checked || noiseBuffers.length === 0) return mainBuffer;
-
-  // random noise sample
-  const noise = noiseBuffers[Math.floor(Math.random() * noiseBuffers.length)];
-
-  // nieuwe buffer voor mix
-  const mixed = audioCtx.createBuffer(
-    mainBuffer.numberOfChannels,
-    mainBuffer.length,
-    mainBuffer.sampleRate
-  );
-
-  for (let ch = 0; ch < mainBuffer.numberOfChannels; ch++) {
-    const mainData = mainBuffer.getChannelData(ch);
-    const noiseData = noise.getChannelData(Math.min(ch, noise.numberOfChannels-1));
-    const mixedData = mixed.getChannelData(ch);
-
-    for (let i = 0; i < mainBuffer.length; i++) {
-      const n = noiseData[i % noise.length]; // loop noise
-      mixedData[i] = mainData[i] + (n * VINYL_NOISE_VOLUME);
+      const bufs = [];
+      for (let i = 1; i <= 10; i++) {
+        const url = `noise/noise${String(i).padStart(2, '0')}.wav`;
+        const res = await fetch(url);
+        const arr = await res.arrayBuffer();
+        const buf = await audioCtx.decodeAudioData(arr);
+        bufs.push(buf);
+      }
+      noiseBuffers = bufs;
+      console.log("Loaded noise samples:", noiseBuffers.length);
     }
-  }
-  return mixed;
-}
+
+    function mixWithNoise(mainBuffer) {
+      if (!vinylNoiseEl.checked || noiseBuffers.length === 0) return mainBuffer;
+
+      // random noise sample
+      const noise = noiseBuffers[Math.floor(Math.random() * noiseBuffers.length)];
+
+      // nieuwe buffer voor mix
+      const mixed = audioCtx.createBuffer(
+        mainBuffer.numberOfChannels,
+        mainBuffer.length,
+        mainBuffer.sampleRate
+      );
+
+      for (let ch = 0; ch < mainBuffer.numberOfChannels; ch++) {
+        const mainData = mainBuffer.getChannelData(ch);
+        const noiseData = noise.getChannelData(Math.min(ch, noise.numberOfChannels - 1));
+        const mixedData = mixed.getChannelData(ch);
+
+        for (let i = 0; i < mainBuffer.length; i++) {
+          const n = noiseData[i % noise.length]; // loop noise
+          mixedData[i] = mainData[i] + (n * VINYL_NOISE_VOLUME);
+        }
+      }
+      return mixed;
+    }
 
     // ==== load / record
     async function loadArrayBuffer(arr, name = '') {
@@ -1503,20 +1506,42 @@ function mixWithNoise(mainBuffer) {
       const sEnd = Math.floor(clipEnd * sr);
       const sLen = Math.max(1, sEnd - sStart);
 
-      const outLen = scratchSamples;
+      // === Stap 1: bouw scratchInput buffer (sample + noise als één bron) ===
+      let scratchInput = sampleBuffer;
+      if (vinylNoiseEl.checked && noiseBuffers.length > 0) {
+        const noise = noiseBuffers[Math.floor(Math.random() * noiseBuffers.length)];
+
+        scratchInput = audioCtx.createBuffer(
+          sampleBuffer.numberOfChannels,
+          sampleBuffer.length,
+          sampleBuffer.sampleRate
+        );
+
+        for (let ch = 0; ch < sampleBuffer.numberOfChannels; ch++) {
+          const mainData = sampleBuffer.getChannelData(ch);
+          const noiseData = noise.getChannelData(Math.min(ch, noise.numberOfChannels - 1));
+          const scratchData = scratchInput.getChannelData(ch);
+
+          for (let i = 0; i < sampleBuffer.length; i++) {
+            const n = noiseData[i % noise.length]; // loop de noise
+            scratchData[i] = mainData[i] + (n * VINYL_NOISE_VOLUME);
+          }
+        }
+      }
+
+      // === Stap 2: scratch uitvoeren met scratchInput ===
       let out = new AudioBuffer({
-        length: outLen,
-        numberOfChannels: sampleBuffer.numberOfChannels,
+        length: scratchSamples,
+        numberOfChannels: scratchInput.numberOfChannels,
         sampleRate: sr
       });
 
       let lastPos = sStart;
 
       for (let ch = 0; ch < out.numberOfChannels; ch++) {
-        const inData = sampleBuffer.getChannelData(ch);
+        const inData = scratchInput.getChannelData(ch);
         const outData = out.getChannelData(ch);
 
-        // --- Scratch part ---
         for (let i = 0; i < scratchSamples; i++) {
           const u = (scratchCurve[i] + 1) * 0.5;
           const srcPos = sStart + u * (sLen - 1);
@@ -1530,7 +1555,7 @@ function mixWithNoise(mainBuffer) {
           outData[scratchSamples - 1] = v * gainCurve[scratchSamples - 1];
         }
 
-        // Fade in/out
+        // Fade in/out (anti-click)
         const fadeSamples = Math.floor(sr * 0.025);
         for (let i = 0; i < fadeSamples; i++) {
           const t = i / fadeSamples;
@@ -1540,9 +1565,9 @@ function mixWithNoise(mainBuffer) {
         }
       }
 
-      // === Slip Mode continuation ===
+      // === Stap 3: Slip Mode continuation ===
       if (slipModeEl.checked) {
-        const slipRemaining = Math.max(0, sampleBuffer.length - Math.floor(lastPos));
+        const slipRemaining = Math.max(0, scratchInput.length - Math.floor(lastPos));
         const slipSamples = slipRemaining;
 
         const extended = new AudioBuffer({
@@ -1558,7 +1583,7 @@ function mixWithNoise(mainBuffer) {
 
         // Fill slip continuation
         for (let c = 0; c < out.numberOfChannels; c++) {
-          const inData = sampleBuffer.getChannelData(c);
+          const inData = scratchInput.getChannelData(c);
           const extData = extended.getChannelData(c);
           let pos = Math.floor(lastPos);
           for (let i = 0; i < slipSamples; i++) {
@@ -1569,6 +1594,7 @@ function mixWithNoise(mainBuffer) {
         out = extended;
       }
 
+      // === Stap 4: render in OfflineAudioContext ===
       const offline = new OfflineAudioContext(out.numberOfChannels, out.length, out.sampleRate);
       const src = offline.createBufferSource();
       src.buffer = out;
@@ -1576,36 +1602,35 @@ function mixWithNoise(mainBuffer) {
       src.start();
       const rendered = await offline.startRendering();
 
-// === Vinyl Noise toevoegen ===
-return mixWithNoise(rendered);
+      return rendered;
     }
 
     // ==== Presets
     let presets = [];
 
-async function loadPresets() {
-  try {
-    const res = await fetch("scratches.json");
-    presets = await res.json();
-    console.log("Scratch curves loaded:", presets);
+    async function loadPresets() {
+      try {
+        const res = await fetch("scratches.json");
+        presets = await res.json();
+        console.log("Scratch curves loaded:", presets);
 
-    // Now initialize UI only after presets exist
-    init();
-  } catch (err) {
-    console.error("Failed to load scratch curves:", err);
-  }
-}
+        // Now initialize UI only after presets exist
+        init();
+      } catch (err) {
+        console.error("Failed to load scratch curves:", err);
+      }
+    }
 
-function init() {
-  fitCanvasToDisplay(preCanvas);
-  fitCanvasToDisplay(waveCanvas);
-  drawPreWave();
-  drawMainWave();
-  updateLabels();
-  renderPresetGrid();   // <-- now this has data
-  recControls.classList.add('idle');
-  setPreBtnState('play');
-}
+    function init() {
+      fitCanvasToDisplay(preCanvas);
+      fitCanvasToDisplay(waveCanvas);
+      drawPreWave();
+      drawMainWave();
+      updateLabels();
+      renderPresetGrid();   // <-- now this has data
+      recControls.classList.add('idle');
+      setPreBtnState('play');
+    }
 
     async function renderPresetGrid(forceRedrawWaves = false) {
       presetGrid.innerHTML = '';
@@ -1656,55 +1681,49 @@ function init() {
       const sEnd = Math.floor(clipEnd * sr);
       const sLen = Math.max(1, sEnd - sStart);
 
-      let out = new AudioBuffer({ length: scratchSamples, numberOfChannels: 1, sampleRate: sr });
-      const inData = sampleBuffer.getChannelData(0);
-      const outData = out.getChannelData(0);
+      // === Stap 1: scratchInput bouwen (sample + noise) ===
+      let scratchInput = sampleBuffer;
+      if (vinylNoiseEl.checked && noiseBuffers.length > 0) {
+        const noise = noiseBuffers[Math.floor(Math.random() * noiseBuffers.length)];
+
+        scratchInput = audioCtx.createBuffer(
+          sampleBuffer.numberOfChannels,
+          sampleBuffer.length,
+          sampleBuffer.sampleRate
+        );
+
+        for (let ch = 0; ch < sampleBuffer.numberOfChannels; ch++) {
+          const mainData = sampleBuffer.getChannelData(ch);
+          const noiseData = noise.getChannelData(Math.min(ch, noise.numberOfChannels - 1));
+          const scratchData = scratchInput.getChannelData(ch);
+
+          for (let i = 0; i < sampleBuffer.length; i++) {
+            const n = noiseData[i % noise.length]; // loop noise
+            scratchData[i] = mainData[i] + (n * VINYL_NOISE_VOLUME);
+          }
+        }
+      }
+
+      // === Stap 2: scratch uitvoeren met scratchInput ===
+      const out = audioCtx.createBuffer(
+        scratchInput.numberOfChannels,
+        scratchSamples,
+        sr
+      );
 
       let lastPos = sStart;
 
-      // Scratch part
-      for (let i = 0; i < scratchSamples; i++) {
-        const u = (scratchCurve[i] + 1) * 0.5;
-        const srcPos = sStart + u * (sLen - 1);
-        lastPos = srcPos;
-        const v = sampleCubic(inData, srcPos);
-        outData[i] = v * gainCurve[i];
-      }
+      for (let ch = 0; ch < out.numberOfChannels; ch++) {
+        const inData = scratchInput.getChannelData(ch);
+        const outData = out.getChannelData(ch);
 
-      if (scratchSamples > 0) {
-        const v = sampleCubic(inData, lastPos);
-        outData[scratchSamples - 1] = v * gainCurve[scratchSamples - 1];
-      }
-
-      // Fade in/out
-      const fadeSamples = Math.floor(sr * 0.025);
-      for (let i = 0; i < fadeSamples; i++) {
-        const t = i / fadeSamples;
-        outData[i] *= t;
-        const j = outData.length - 1 - i;
-        if (j >= 0) outData[j] *= t;
-      }
-
-      // === Slip Mode continuation ===
-      if (slipModeEl.checked) {
-        const slipRemaining = Math.max(0, sampleBuffer.length - Math.floor(lastPos));
-        const slipSamples = slipRemaining;
-
-        const extended = new AudioBuffer({
-          length: out.length + slipSamples,
-          numberOfChannels: 1,
-          sampleRate: sr
-        });
-
-        extended.getChannelData(0).set(out.getChannelData(0), 0);
-
-        let pos = Math.floor(lastPos);
-        const extData = extended.getChannelData(0);
-        for (let i = 0; i < slipSamples; i++) {
-          extData[out.length + i] = inData[pos + i] || 0;
+        for (let i = 0; i < scratchSamples; i++) {
+          const u = (scratchCurve[i] + 1) * 0.5;
+          const srcPos = sStart + u * (sLen - 1);
+          lastPos = srcPos;
+          const v = sampleCubic(inData, srcPos);
+          outData[i] = v * gainCurve[i];
         }
-
-        out = extended;
       }
 
       return out;
