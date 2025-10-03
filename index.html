@@ -31,7 +31,7 @@
 
     html,
     body {
-    height: 100%;
+      height: 100%;
       margin: 0;
     }
 
@@ -39,7 +39,7 @@
       font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
       color: var(--text);
       background: linear-gradient(to bottom, #181C1A 0%, #0D0D0D 100%);
-      background-attachment: fixed; 
+      background-attachment: fixed;
       background-repeat: no-repeat;
       background-size: 100% 100%;
 
@@ -513,50 +513,58 @@
     }
 
     .beat-options {
-  position: absolute;
-  top: -9999px;
-  left: -9999px;
-  opacity: 0;
-  transform: scale(0.8);
-  transition: opacity 0.2s, transform 0.2s;
-}
+      position: absolute;
+      top: -9999px;
+      left: -9999px;
+      opacity: 0;
+      transform: scale(0.8);
+      transition: opacity 0.2s, transform 0.2s;
+    }
 
     .beat-popup {
-  display: none;
-  position: absolute;
-  bottom: 40px;
-  left: 0;
-  right: 0;
-  background: #111;
-  border: 1px solid #2a2a2a;
-  border-radius: 999px;
-  padding: 6px 10px;
-  display: flex;
-  justify-content: center;
-  gap: 8px;
-  box-shadow: 0 6px 16px rgba(0,0,0,0.4);
-  animation: fadeInUp .25s ease forwards;
-  z-index: 5;
-}
+      display: none;
+      position: absolute;
+      bottom: 40px;
+      left: 0;
+      right: 0;
+      background: #111;
+      border: 1px solid #2a2a2a;
+      border-radius: 999px;
+      padding: 6px 10px;
+      display: flex;
+      justify-content: center;
+      gap: 8px;
+      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
+      animation: fadeInUp .25s ease forwards;
+      z-index: 5;
+    }
 
-.beat-popup button {
-  background: #222;
-  border: 1px solid #444;
-  border-radius: 999px;
-  padding: 6px 10px;
-  font-size: 13px;
-  color: #fff;
-  cursor: pointer;
-}
-.beat-popup button:hover {
-  background: var(--accent);
-  color: #000;
-}
+    .beat-popup button {
+      background: #222;
+      border: 1px solid #444;
+      border-radius: 999px;
+      padding: 6px 10px;
+      font-size: 13px;
+      color: #fff;
+      cursor: pointer;
+    }
 
-@keyframes fadeInUp {
-  from { opacity: 0; transform: translateY(10px); }
-  to   { opacity: 1; transform: translateY(0); }
-}
+    .beat-popup button:hover {
+      background: var(--accent);
+      color: #000;
+    }
+
+    @keyframes fadeInUp {
+      from {
+        opacity: 0;
+        transform: translateY(10px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
 
     .preset-card.enabled .beat-icon img.beat-svg {
       opacity: 1;
@@ -1794,186 +1802,186 @@
     }
 
     async function renderPresetGrid() {
-  presetGrid.innerHTML = '';
+      presetGrid.innerHTML = '';
 
-  // --- create ONE global popup and reuse it ---
-  let options = document.querySelector('.beat-options');
-  if (!options) {
-    options = document.createElement('div');
-    options.className = "beat-options";
-    Object.assign(options.style, {
-      position: "absolute",
-      display: "flex",
-      flexDirection: "row",
-      justifyContent: "center",
-      alignItems: "center",
-      gap: "10px",
-      padding: "6px 10px",
-      background: "rgba(20,20,20,0.95)",
-      border: "1px solid #333",
-      borderRadius: "999px",
-      boxShadow: "0 6px 20px rgba(0,0,0,0.5)",
-      zIndex: "999999",
-      opacity: "0",
-      transform: "scale(0.8)",
-      pointerEvents: "none",
-      transition: "opacity 0.2s ease, transform 0.2s ease"
-    });
+      // --- create ONE global popup and reuse it ---
+      let options = document.querySelector('.beat-options');
+      if (!options) {
+        options = document.createElement('div');
+        options.className = "beat-options";
+        Object.assign(options.style, {
+          position: "absolute",
+          display: "flex",
+          flexDirection: "row",
+          justifyContent: "center",
+          alignItems: "center",
+          gap: "10px",
+          padding: "6px 10px",
+          background: "rgba(20,20,20,0.95)",
+          border: "1px solid #333",
+          borderRadius: "999px",
+          boxShadow: "0 6px 20px rgba(0,0,0,0.5)",
+          zIndex: "999999",
+          opacity: "0",
+          transform: "scale(0.8)",
+          pointerEvents: "none",
+          transition: "opacity 0.2s ease, transform 0.2s ease"
+        });
 
-    // add beat icons once
-    [1, 2, 3, 4].forEach(optBeat => {
-      const opt = document.createElement('img');
-      opt.src = `icons/beat-${optBeat}.svg`;
-      opt.alt = `${optBeat} beat`;
-      opt.style.width = "28px";
-      opt.style.cursor = "pointer";
-      options.appendChild(opt);
-    });
+        // add beat icons once
+        [1, 2, 3, 4].forEach(optBeat => {
+          const opt = document.createElement('img');
+          opt.src = `icons/beat-${optBeat}.svg`;
+          opt.alt = `${optBeat} beat`;
+          opt.style.width = "28px";
+          opt.style.cursor = "pointer";
+          options.appendChild(opt);
+        });
 
-    document.body.appendChild(options);
-  }
+        document.body.appendChild(options);
+      }
 
-  presets.forEach((p, idx) => {
-    const node = presetCardTpl.content.cloneNode(true);
-    const card = node.querySelector('.preset-card');
-    node.querySelector('.pname').textContent = p.name;
+      presets.forEach((p, idx) => {
+        const node = presetCardTpl.content.cloneNode(true);
+        const card = node.querySelector('.preset-card');
+        node.querySelector('.pname').textContent = p.name;
 
-    const beats = parseInt(p.duration, 10) || 1;
-    const currentBeat = presetBeats[idx] || beats;
-    const beatIconWrap = node.querySelector('.beat-icon');
+        const beats = parseInt(p.duration, 10) || 1;
+        const currentBeat = presetBeats[idx] || beats;
+        const beatIconWrap = node.querySelector('.beat-icon');
 
-    // --- main beat icon ---
-    beatIconWrap.innerHTML = `
+        // --- main beat icon ---
+        beatIconWrap.innerHTML = `
       <img src="icons/beat-${currentBeat}.svg" alt="${currentBeat} beat" class="beat-svg">
     `;
 
-    // make beat icon clickable
-    beatIconWrap.style.position = "relative";
-    beatIconWrap.style.cursor = "pointer";
+        // make beat icon clickable
+        beatIconWrap.style.position = "relative";
+        beatIconWrap.style.cursor = "pointer";
 
-    let activeBeatIcon = null; // track which card opened the popup
+        let activeBeatIcon = null; // track which card opened the popup
 
-beatIconWrap.addEventListener("click", (e) => {
-  e.stopPropagation();
+        beatIconWrap.addEventListener("click", (e) => {
+          e.stopPropagation();
 
-  // if clicking the same icon again → close it
-  if (activeBeatIcon === beatIconWrap) {
-    options.style.opacity = "0";
-    options.style.transform = "scale(0.8)";
-    options.style.pointerEvents = "none";
-    activeBeatIcon = null;
-    return;
-  }
-
-  // otherwise open for this card
-  activeBeatIcon = beatIconWrap;
-
-  // position popup
-  const rect = beatIconWrap.getBoundingClientRect();
-  options.style.top = (window.scrollY + rect.top - options.offsetHeight - 8) + "px";
-  options.style.left = (window.scrollX + rect.left + rect.width / 2 - options.offsetWidth / 2) + "px";
-
-  // highlight correct beat
-  const currentBeat = presetBeats[idx] || parseInt(p.duration, 10) || 1;
-  options.querySelectorAll('img').forEach(img => {
-    const optBeat = parseInt(img.alt, 10);
-    if (optBeat === currentBeat) {
-      img.style.opacity = "1";
-      img.style.transform = "scale(1.1)";
-    } else {
-      img.style.opacity = "0.2";
-      img.style.transform = "scale(1)";
-    }
-  });
-
-  // show popup
-  options.style.opacity = "1";
-  options.style.transform = "scale(1)";
-  options.style.pointerEvents = "auto";
-
-      // attach click handlers dynamically
-      options.querySelectorAll('img').forEach(opt => {
-        opt.onclick = async (ev) => {
-          ev.stopPropagation();
-          const optBeat = parseInt(opt.alt, 10);
-
-          presets[idx].duration = optBeat;
-
-          try {
-            const rendered = await renderEffectToBuffer(presets[idx]);
-            presetBuffers[idx] = rendered;
-            presetBeats[idx] = optBeat;
-          } catch (err) {
-            console.error("Re-render failed:", err);
+          // if clicking the same icon again → close it
+          if (activeBeatIcon === beatIconWrap) {
+            options.style.opacity = "0";
+            options.style.transform = "scale(0.8)";
+            options.style.pointerEvents = "none";
+            activeBeatIcon = null;
+            return;
           }
 
-          // update duration + icon
-          const durationEl = card.querySelector('.duration');
-          if (presetBuffers[idx]) {
-            durationEl.textContent = `${presetBuffers[idx].duration.toFixed(2)}s`;
-          }
-          const beatIconImg = card.querySelector('.beat-svg');
-          beatIconImg.src = `icons/beat-${optBeat}.svg`;
-          beatIconImg.alt = `${optBeat} beat`;
+          // otherwise open for this card
+          activeBeatIcon = beatIconWrap;
 
-          const mini = card.querySelector('.mini-wave');
-          if (presetBuffers[idx]) {
-            drawMiniFromBuffer(mini, presetBuffers[idx], null, optBeat);
-          }
+          // position popup
+          const rect = beatIconWrap.getBoundingClientRect();
+          options.style.top = (window.scrollY + rect.top - options.offsetHeight - 8) + "px";
+          options.style.left = (window.scrollX + rect.left + rect.width / 2 - options.offsetWidth / 2) + "px";
 
-          // close popup
+          // highlight correct beat
+          const currentBeat = presetBeats[idx] || parseInt(p.duration, 10) || 1;
+          options.querySelectorAll('img').forEach(img => {
+            const optBeat = parseInt(img.alt, 10);
+            if (optBeat === currentBeat) {
+              img.style.opacity = "1";
+              img.style.transform = "scale(1.1)";
+            } else {
+              img.style.opacity = "0.2";
+              img.style.transform = "scale(1)";
+            }
+          });
+
+          // show popup
+          options.style.opacity = "1";
+          options.style.transform = "scale(1)";
+          options.style.pointerEvents = "auto";
+
+          // attach click handlers dynamically
+          options.querySelectorAll('img').forEach(opt => {
+            opt.onclick = async (ev) => {
+              ev.stopPropagation();
+              const optBeat = parseInt(opt.alt, 10);
+
+              presets[idx].duration = optBeat;
+
+              try {
+                const rendered = await renderEffectToBuffer(presets[idx]);
+                presetBuffers[idx] = rendered;
+                presetBeats[idx] = optBeat;
+              } catch (err) {
+                console.error("Re-render failed:", err);
+              }
+
+              // update duration + icon
+              const durationEl = card.querySelector('.duration');
+              if (presetBuffers[idx]) {
+                durationEl.textContent = `${presetBuffers[idx].duration.toFixed(2)}s`;
+              }
+              const beatIconImg = card.querySelector('.beat-svg');
+              beatIconImg.src = `icons/beat-${optBeat}.svg`;
+              beatIconImg.alt = `${optBeat} beat`;
+
+              const mini = card.querySelector('.mini-wave');
+              if (presetBuffers[idx]) {
+                drawMiniFromBuffer(mini, presetBuffers[idx], null, optBeat);
+              }
+
+              // close popup
+              options.style.opacity = "0";
+              options.style.transform = "scale(0.8)";
+              options.style.pointerEvents = "none";
+              activeBeatIcon = null;
+            };
+          });
+        });
+
+        // --- duration label ---
+        if (presetBuffers[idx]) {
+          node.querySelector('.duration').textContent =
+            `${presetBuffers[idx].duration.toFixed(2)}s`;
+        } else {
+          const bpm = parseFloat(bpmEl.value || '120');
+          const beatDur = 60 / (isFinite(bpm) ? bpm : 120);
+          node.querySelector('.duration').textContent =
+            `${(beatDur * currentBeat).toFixed(2)}s`;
+        }
+
+        // --- mini waveform preview ---
+        const mini = node.querySelector('.mini-wave');
+        if (sampleBuffer) {
+          const preview = synthesizePreviewBuffer(p);
+          drawMiniFromBuffer(mini, preview, null, currentBeat);
+        }
+
+        // --- play / download handlers ---
+        const playBtn = node.querySelector('.playBtn');
+        const dlBtn = node.querySelector('.dlBtn');
+        playBtn.addEventListener('click', async () => {
+          await handlePlayPreset(idx, playBtn, mini);
+        });
+        dlBtn.addEventListener('click', async () => {
+          await handleDownloadPreset(idx);
+        });
+        mini.addEventListener('click', async () => {
+          await handlePlayPreset(idx, playBtn, mini);
+        });
+
+        presetGrid.appendChild(node);
+      });
+
+      // close popup when clicking outside
+      document.addEventListener('click', (e) => {
+        if (!e.target.closest('.beat-options') && !e.target.closest('.beat-icon')) {
           options.style.opacity = "0";
           options.style.transform = "scale(0.8)";
           options.style.pointerEvents = "none";
           activeBeatIcon = null;
-        };
+        }
       });
-    });
-
-    // --- duration label ---
-    if (presetBuffers[idx]) {
-      node.querySelector('.duration').textContent =
-        `${presetBuffers[idx].duration.toFixed(2)}s`;
-    } else {
-      const bpm = parseFloat(bpmEl.value || '120');
-      const beatDur = 60 / (isFinite(bpm) ? bpm : 120);
-      node.querySelector('.duration').textContent =
-        `${(beatDur * currentBeat).toFixed(2)}s`;
     }
-
-    // --- mini waveform preview ---
-    const mini = node.querySelector('.mini-wave');
-    if (sampleBuffer) {
-      const preview = synthesizePreviewBuffer(p);
-      drawMiniFromBuffer(mini, preview, null, currentBeat);
-    }
-
-    // --- play / download handlers ---
-    const playBtn = node.querySelector('.playBtn');
-    const dlBtn = node.querySelector('.dlBtn');
-    playBtn.addEventListener('click', async () => {
-      await handlePlayPreset(idx, playBtn, mini);
-    });
-    dlBtn.addEventListener('click', async () => {
-      await handleDownloadPreset(idx);
-    });
-    mini.addEventListener('click', async () => {
-      await handlePlayPreset(idx, playBtn, mini);
-    });
-
-    presetGrid.appendChild(node);
-  });
-
-  // close popup when clicking outside
-  document.addEventListener('click', (e) => {
-  if (!e.target.closest('.beat-options') && !e.target.closest('.beat-icon')) {
-    options.style.opacity = "0";
-    options.style.transform = "scale(0.8)";
-    options.style.pointerEvents = "none";
-    activeBeatIcon = null;
-  }
-});
-}
 
 
     function synthesizePreviewBuffer(preset) {
@@ -2250,8 +2258,8 @@ beatIconWrap.addEventListener("click", (e) => {
     setInterval(createBubble, 2000);
 
     document.addEventListener('click', () => {
-  document.querySelectorAll('.beat-popup').forEach(p => p.style.display = 'none');
-});
+      document.querySelectorAll('.beat-popup').forEach(p => p.style.display = 'none');
+    });
 
     loadNoiseBuffers();
     loadPresets();
