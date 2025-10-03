@@ -11,7 +11,7 @@
   <style>
     :root {
       --bg: #0e0e0e;
-      --panel: #1e211f28;
+      --panel: #1e211f5c;
       --panel-elev: #222523;
       --line: #2a2a2a;
       --text: #f1f1f1;
@@ -31,6 +31,7 @@
 
     html,
     body {
+    height: 100%;
       margin: 0;
     }
 
@@ -38,8 +39,9 @@
       font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
       color: var(--text);
       background: linear-gradient(to bottom, #181C1A 0%, #0D0D0D 100%);
+      background-attachment: fixed; 
       background-repeat: no-repeat;
-      background-size: cover;
+      background-size: 100% 100%;
 
     }
 
@@ -290,6 +292,7 @@
       border-radius: 10px;
       height: 160px;
       touch-action: none;
+      pointer-events: none;
     }
 
     /* Preselection – smaller, subtle */
@@ -337,6 +340,7 @@
       flex-wrap: wrap;
       align-items: center;
       column-gap: 20px;
+      gap: 14px;
     }
 
     .field label {
@@ -508,6 +512,43 @@
       transition: opacity 0.6s ease;
     }
 
+    .beat-popup {
+  display: none;
+  position: absolute;
+  bottom: 40px;
+  left: 0;
+  right: 0;
+  background: #111;
+  border: 1px solid #2a2a2a;
+  border-radius: 999px;
+  padding: 6px 10px;
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  box-shadow: 0 6px 16px rgba(0,0,0,0.4);
+  animation: fadeInUp .25s ease forwards;
+  z-index: 5;
+}
+
+.beat-popup button {
+  background: #222;
+  border: 1px solid #444;
+  border-radius: 999px;
+  padding: 6px 10px;
+  font-size: 13px;
+  color: #fff;
+  cursor: pointer;
+}
+.beat-popup button:hover {
+  background: var(--accent);
+  color: #000;
+}
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
     .preset-card.enabled .beat-icon img.beat-svg {
       opacity: 1;
     }
@@ -522,7 +563,7 @@
     }
 
     .preset-card.enabled .beat-count {
-      opacity: 1;
+      opacity: 0.8;
       color: #8b8b8b;
     }
 
@@ -543,9 +584,10 @@
     }
 
     .playBtn.playing {
-  background: rgb(16, 102, 47); /* donkerder groen */
-  border-color: transparent;
-}
+      background: rgb(16, 102, 47);
+      /* donkerder groen */
+      border-color: transparent;
+    }
 
     .preset-card.enabled canvas {
       opacity: 1;
@@ -793,15 +835,19 @@
     @media (max-width: 600px) {
       #generateBtn {
         display: block;
-        /* takes full row */
-        margin: 14px auto 0;
-        /* centers horizontally */
       }
     }
 
     @media (max-width: 600px) {
       .section-title {
+        display: flex;
         align-items: initial;
+      }
+    }
+
+    @media (max-width: 600px) {
+      #prePanel.panel .section-title {
+        display: block;
       }
     }
 
@@ -865,7 +911,9 @@
     <section class="panel" id="prePanel">
       <div class="section-title">
         <h2 id="fileSubtitle"></h2>
-        <div class="row">
+        <div class="row" style="
+    margin-bottom: 10px;
+">
           <button id="reloadSampleBtn" class="tiny pill ghost" disabled>Reset</button>
           <button id="commitPreBtn" class="tiny pill primary" disabled>Cut Sample</button>
           <button id="prePlayBtn" class="round-icon small" title="Preview" disabled>
@@ -914,12 +962,12 @@
         <div class="field switch-field">
           <span style="padding:7px" class="switch-label">Vinyl Noise</span>
           <label class="switch">
-            <input id="vinylNoise" type="checkbox"/>
+            <input id="vinylNoise" type="checkbox" />
             <span class="slider round"></span>
           </label>
         </div>
         <button id="generateBtn" class="primary"
-          style="font-size:20px; margin-left:auto; padding:10px 90px 10px 90px; border-radius:999px; font-family: Oswald, sans-serif;"
+          style="font-size:20px; margin-left:auto; margin-right: 3px; padding:10px 90px 10px 90px; border-radius:999px; font-family: Oswald, sans-serif;"
           disabled>
           Generate Samples
         </button>
@@ -1157,54 +1205,54 @@
     }
 
     function drawMiniFromBuffer(canvas, buffer, playPct = null, beats = 1) {
-  const dpr = fitCanvasToDisplay(canvas);
-  const ctx = canvas.getContext('2d');
-  const w = canvas.width, h = canvas.height;
-  ctx.clearRect(0, 0, w, h);
-  ctx.fillStyle = '#121212';
-  ctx.fillRect(0, 0, w, h);
-  if (!buffer) return;
+      const dpr = fitCanvasToDisplay(canvas);
+      const ctx = canvas.getContext('2d');
+      const w = canvas.width, h = canvas.height;
+      ctx.clearRect(0, 0, w, h);
+      ctx.fillStyle = '#121212';
+      ctx.fillRect(0, 0, w, h);
+      if (!buffer) return;
 
-  // waveform tekenen
-  const data = buffer.getChannelData(0);
-  const step = Math.max(1, Math.floor(data.length / w));
-  ctx.strokeStyle = '#16a34a';
-  ctx.lineWidth = Math.max(1, dpr);
-  ctx.shadowColor = '#22c55e4A';
-  ctx.shadowBlur = 8;
-  ctx.beginPath();
-  for (let x = 0; x < w; x++) {
-    const v = data[x * step] || 0;
-    const y = (1 - (v + 1) / 2) * h;
-    if (x === 0) ctx.moveTo(x, y);
-    else ctx.lineTo(x, y);
-  }
-  ctx.stroke();
-
-  // beat-lijntjes tekenen (alleen als slip uit stond bij generate)
-  if (!lastGeneratedWithSlip && beats > 1) {
-    ctx.strokeStyle = 'rgba(255,255,255,0.25)';
-    ctx.lineWidth = 0.5 * dpr;
-    for (let b = 1; b < beats; b++) {
-      const x = Math.round((b / beats) * w);
+      // waveform tekenen
+      const data = buffer.getChannelData(0);
+      const step = Math.max(1, Math.floor(data.length / w));
+      ctx.strokeStyle = '#16a34a';
+      ctx.lineWidth = Math.max(1, dpr);
+      ctx.shadowColor = '#22c55e4A';
+      ctx.shadowBlur = 8;
       ctx.beginPath();
-      ctx.moveTo(x, 0);
-      ctx.lineTo(x, h);
+      for (let x = 0; x < w; x++) {
+        const v = data[x * step] || 0;
+        const y = (1 - (v + 1) / 2) * h;
+        if (x === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      }
       ctx.stroke();
-    }
-  }
 
-  // playhead tekenen
-  if (playPct != null) {
-    const x = clamp(Math.round(playPct * (w - 1)), 0, w - 1);
-    ctx.strokeStyle = '#fff';
-    ctx.lineWidth = Math.max(1, dpr);
-    ctx.beginPath();
-    ctx.moveTo(x, 0);
-    ctx.lineTo(x, h);
-    ctx.stroke();
-  }
-}
+      // beat-lijntjes tekenen (alleen als slip uit stond bij generate)
+      if (!lastGeneratedWithSlip && beats > 1) {
+        ctx.strokeStyle = 'rgba(255,255,255,0.25)';
+        ctx.lineWidth = 0.5 * dpr;
+        for (let b = 1; b < beats; b++) {
+          const x = Math.round((b / beats) * w);
+          ctx.beginPath();
+          ctx.moveTo(x, 0);
+          ctx.lineTo(x, h);
+          ctx.stroke();
+        }
+      }
+
+      // playhead tekenen
+      if (playPct != null) {
+        const x = clamp(Math.round(playPct * (w - 1)), 0, w - 1);
+        ctx.strokeStyle = '#fff';
+        ctx.lineWidth = Math.max(1, dpr);
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, h);
+        ctx.stroke();
+      }
+    }
 
 
     function drawCurve(canvas, arr, lo, hi, label) {
@@ -1272,38 +1320,38 @@
 
     // ==== load / record
     async function loadArrayBuffer(arr, name = '') {
-  const decoded = await audioCtx.decodeAudioData(arr);
+      const decoded = await audioCtx.decodeAudioData(arr);
 
-  const maxDuration = 60; // seconds – change if you want longer
-  if (decoded.duration > maxDuration) {
-    recStatus.textContent = `❌ File too long (${decoded.duration.toFixed(1)}s). Max allowed is ${maxDuration}s.`;
-    return;
-  }
+      const maxDuration = 60; // seconds – change if you want longer
+      if (decoded.duration > maxDuration) {
+        recStatus.textContent = `❌ File too long (${decoded.duration.toFixed(1)}s). Max allowed is ${maxDuration}s.`;
+        return;
+      }
 
-  sampleBuffer = decoded;
-  originalSampleBuffer = sampleBuffer;
-  sampleFileName = name || 'Sample';
-  fileSubtitle.textContent = sampleFileName;
+      sampleBuffer = decoded;
+      originalSampleBuffer = sampleBuffer;
+      sampleFileName = name || 'Sample';
+      fileSubtitle.textContent = sampleFileName;
 
-  // Default to 1s preselection
-  preStart = 0;
-  preEnd = Math.min(1, sampleBuffer.duration);
+      // Default to 1s preselection
+      preStart = 0;
+      preEnd = Math.min(1, sampleBuffer.duration);
 
-  // Default clip length (scratch area) – you can make it 1s too if you like
-  clipStart = 0;
-  clipEnd = Math.min(0.10, sampleBuffer.duration);
+      // Default clip length (scratch area) – you can make it 1s too if you like
+      clipStart = 0;
+      clipEnd = Math.min(0.10, sampleBuffer.duration);
 
-  recStatus.textContent = `Sample: ${sampleBuffer.duration.toFixed(2)}s @ ${sampleBuffer.sampleRate} Hz`;
+      recStatus.textContent = `Sample: ${sampleBuffer.duration.toFixed(2)}s @ ${sampleBuffer.sampleRate} Hz`;
 
-  prePlayBtn.disabled = false;
-  commitPreBtn.disabled = false;
-  reloadSampleBtn.disabled = false;
-  generateBtn.disabled = false;
+      prePlayBtn.disabled = false;
+      commitPreBtn.disabled = false;
+      reloadSampleBtn.disabled = false;
+      generateBtn.disabled = false;
 
-  drawPreWave();
-  drawMainWave();
-  updateLabels();
-}
+      drawPreWave();
+      drawMainWave();
+      updateLabels();
+    }
 
     dropzone.addEventListener('click', () => fileInput.click());
     browseLink.addEventListener('click', (e) => { e.stopPropagation(); fileInput.click(); });
@@ -1736,53 +1784,188 @@
       setPreBtnState('play');
     }
 
-    async function renderPresetGrid(forceRedrawWaves = false) {
-      presetGrid.innerHTML = '';
+    async function renderPresetGrid() {
+  presetGrid.innerHTML = '';
 
-      presets.forEach((p, idx) => {
-        const node = presetCardTpl.content.cloneNode(true);
-        node.querySelector('.pname').textContent = p.name;
-        const beats = parseInt(p.duration, 10) || 1;
-        node.querySelector('.beat-icon').innerHTML = `
-  <img src="icons/beat-${beats}.svg" alt="${beats} beat" class="beat-svg">
-`;
+  // --- create ONE global popup and reuse it ---
+  let options = document.querySelector('.beat-options');
+  if (!options) {
+    options = document.createElement('div');
+    options.className = "beat-options";
+    Object.assign(options.style, {
+      position: "absolute",
+      display: "flex",
+      flexDirection: "row",
+      justifyContent: "center",
+      alignItems: "center",
+      gap: "10px",
+      padding: "6px 10px",
+      background: "rgba(20,20,20,0.95)",
+      border: "1px solid #333",
+      borderRadius: "999px",
+      boxShadow: "0 6px 20px rgba(0,0,0,0.5)",
+      zIndex: "999999",
+      opacity: "0",
+      transform: "scale(0.8)",
+      pointerEvents: "none",
+      transition: "opacity 0.2s ease, transform 0.2s ease"
+    });
 
-        // toon echte duur als buffer al gerenderd is
-        if (presetBuffers[idx]) {
-          node.querySelector('.duration').textContent =
-            `${presetBuffers[idx].duration.toFixed(2)}s`;
-        } else {
-          // fallback: bereken uit BPM en beats
-          const bpm = parseFloat(bpmEl.value || '120');
-          const beatDur = 60 / (isFinite(bpm) ? bpm : 120);
-          node.querySelector('.duration').textContent =
-            `${(beatDur * p.duration).toFixed(2)}s`;
-        }
+    // add beat icons once
+    [1, 2, 3, 4].forEach(optBeat => {
+      const opt = document.createElement('img');
+      opt.src = `icons/beat-${optBeat}.svg`;
+      opt.alt = `${optBeat} beat`;
+      opt.style.width = "28px";
+      opt.style.cursor = "pointer";
+      options.appendChild(opt);
+    });
 
-        const mini = node.querySelector('.mini-wave');
+    document.body.appendChild(options);
+  }
 
-        if (sampleBuffer) {
-          const preview = synthesizePreviewBuffer(p);
-          const beats = parseInt(p.duration, 10) || 1;
-drawMiniFromBuffer(mini, preview, null, beats);
-        }
+  presets.forEach((p, idx) => {
+    const node = presetCardTpl.content.cloneNode(true);
+    const card = node.querySelector('.preset-card');
+    node.querySelector('.pname').textContent = p.name;
 
-        const playBtn = node.querySelector('.playBtn');
-        const dlBtn = node.querySelector('.dlBtn');
+    const beats = parseInt(p.duration, 10) || 1;
+    const currentBeat = presetBeats[idx] || beats;
+    const beatIconWrap = node.querySelector('.beat-icon');
 
-        playBtn.addEventListener('click', async () => {
-          await handlePlayPreset(idx, playBtn, mini);
-        });
-        dlBtn.addEventListener('click', async () => {
-          await handleDownloadPreset(idx);
-        });
-        mini.addEventListener('click', async () => {
-          await handlePlayPreset(idx, playBtn, mini);
-        });
+    // --- main beat icon ---
+    beatIconWrap.innerHTML = `
+      <img src="icons/beat-${currentBeat}.svg" alt="${currentBeat} beat" class="beat-svg">
+    `;
 
-        presetGrid.appendChild(node);
-      });
+    // make beat icon clickable
+    beatIconWrap.style.position = "relative";
+    beatIconWrap.style.cursor = "pointer";
+
+    let activeBeatIcon = null; // track which card opened the popup
+
+beatIconWrap.addEventListener("click", (e) => {
+  e.stopPropagation();
+
+  // if clicking the same icon again → close it
+  if (activeBeatIcon === beatIconWrap) {
+    options.style.opacity = "0";
+    options.style.transform = "scale(0.8)";
+    options.style.pointerEvents = "none";
+    activeBeatIcon = null;
+    return;
+  }
+
+  // otherwise open for this card
+  activeBeatIcon = beatIconWrap;
+
+  // position popup
+  const rect = beatIconWrap.getBoundingClientRect();
+  options.style.top = (window.scrollY + rect.top - options.offsetHeight - 8) + "px";
+  options.style.left = (window.scrollX + rect.left + rect.width / 2 - options.offsetWidth / 2) + "px";
+
+  // highlight correct beat
+  const currentBeat = presetBeats[idx] || parseInt(p.duration, 10) || 1;
+  options.querySelectorAll('img').forEach(img => {
+    const optBeat = parseInt(img.alt, 10);
+    if (optBeat === currentBeat) {
+      img.style.opacity = "1";
+      img.style.transform = "scale(1.1)";
+    } else {
+      img.style.opacity = "0.2";
+      img.style.transform = "scale(1)";
     }
+  });
+
+  // show popup
+  options.style.opacity = "1";
+  options.style.transform = "scale(1)";
+  options.style.pointerEvents = "auto";
+
+      // attach click handlers dynamically
+      options.querySelectorAll('img').forEach(opt => {
+        opt.onclick = async (ev) => {
+          ev.stopPropagation();
+          const optBeat = parseInt(opt.alt, 10);
+
+          presets[idx].duration = optBeat;
+
+          try {
+            const rendered = await renderEffectToBuffer(presets[idx]);
+            presetBuffers[idx] = rendered;
+            presetBeats[idx] = optBeat;
+          } catch (err) {
+            console.error("Re-render failed:", err);
+          }
+
+          // update duration + icon
+          const durationEl = card.querySelector('.duration');
+          if (presetBuffers[idx]) {
+            durationEl.textContent = `${presetBuffers[idx].duration.toFixed(2)}s`;
+          }
+          const beatIconImg = card.querySelector('.beat-svg');
+          beatIconImg.src = `icons/beat-${optBeat}.svg`;
+          beatIconImg.alt = `${optBeat} beat`;
+
+          const mini = card.querySelector('.mini-wave');
+          if (presetBuffers[idx]) {
+            drawMiniFromBuffer(mini, presetBuffers[idx], null, optBeat);
+          }
+
+          // close popup
+          options.style.opacity = "0";
+          options.style.transform = "scale(0.8)";
+          options.style.pointerEvents = "none";
+          activeBeatIcon = null;
+        };
+      });
+    });
+
+    // --- duration label ---
+    if (presetBuffers[idx]) {
+      node.querySelector('.duration').textContent =
+        `${presetBuffers[idx].duration.toFixed(2)}s`;
+    } else {
+      const bpm = parseFloat(bpmEl.value || '120');
+      const beatDur = 60 / (isFinite(bpm) ? bpm : 120);
+      node.querySelector('.duration').textContent =
+        `${(beatDur * currentBeat).toFixed(2)}s`;
+    }
+
+    // --- mini waveform preview ---
+    const mini = node.querySelector('.mini-wave');
+    if (sampleBuffer) {
+      const preview = synthesizePreviewBuffer(p);
+      drawMiniFromBuffer(mini, preview, null, currentBeat);
+    }
+
+    // --- play / download handlers ---
+    const playBtn = node.querySelector('.playBtn');
+    const dlBtn = node.querySelector('.dlBtn');
+    playBtn.addEventListener('click', async () => {
+      await handlePlayPreset(idx, playBtn, mini);
+    });
+    dlBtn.addEventListener('click', async () => {
+      await handleDownloadPreset(idx);
+    });
+    mini.addEventListener('click', async () => {
+      await handlePlayPreset(idx, playBtn, mini);
+    });
+
+    presetGrid.appendChild(node);
+  });
+
+  // close popup when clicking outside
+  document.addEventListener('click', (e) => {
+  if (!e.target.closest('.beat-options') && !e.target.closest('.beat-icon')) {
+    options.style.opacity = "0";
+    options.style.transform = "scale(0.8)";
+    options.style.pointerEvents = "none";
+    activeBeatIcon = null;
+  }
+});
+}
+
 
     function synthesizePreviewBuffer(preset) {
       if (!sampleBuffer) return null;
@@ -1928,7 +2111,7 @@ drawMiniFromBuffer(mini, preview, null, beats);
         presetSrc = src;
 
         buttonEl.textContent = 'Stop';
-        buttonEl.classList.add('playing'); 
+        buttonEl.classList.add('playing');
         startPlayhead('mini', rendered.duration, miniCanvas, i);
       } catch (err) {
         globalStatus.textContent = err.message;
@@ -1943,13 +2126,13 @@ drawMiniFromBuffer(mini, preview, null, beats);
       playhead.active = true; playhead.startAt = audioCtx.currentTime; playhead.duration = duration; playhead.where = where; playhead.canvas = canvas; playhead.miniIdx = miniIdx; if (rafId) cancelAnimationFrame(rafId);
       const tick = () => {
         const t = audioCtx.currentTime - playhead.startAt; if (t >= duration) { stopPlayhead(); onEnd && onEnd(); return; } if (where === 'main') drawMainWave(); else if (where === 'pre') drawPreWave(); else if (where === 'mini' && canvas) {
-  const buf = presetBuffers[miniIdx];
-  if (buf) {
-    const beats = parseInt(presets[miniIdx].duration, 10) || 1;
-    drawMiniFromBuffer(canvas, buf, t / duration, beats);
-  }
-}
- rafId = requestAnimationFrame(tick);
+          const buf = presetBuffers[miniIdx];
+          if (buf) {
+            const beats = parseInt(presets[miniIdx].duration, 10) || 1;
+            drawMiniFromBuffer(canvas, buf, t / duration, beats);
+          }
+        }
+        rafId = requestAnimationFrame(tick);
       };
       rafId = requestAnimationFrame(tick);
     }
@@ -1972,10 +2155,10 @@ drawMiniFromBuffer(mini, preview, null, beats);
       if (playhead.where === 'main') drawMainWave();
       if (playhead.where === 'pre') drawPreWave();
       if (playhead.where === 'mini' && playhead.canvas) {
-  const buf = presetBuffers[playhead.miniIdx];
-  const beats = presetBeats[playhead.miniIdx] || 1;
-  if (buf) drawMiniFromBuffer(playhead.canvas, buf, null, beats);
-}
+        const buf = presetBuffers[playhead.miniIdx];
+        const beats = presetBeats[playhead.miniIdx] || 1;
+        if (buf) drawMiniFromBuffer(playhead.canvas, buf, null, beats);
+      }
       playhead.where = 'none';
     }
 
@@ -1983,7 +2166,7 @@ drawMiniFromBuffer(mini, preview, null, beats);
     init();
 
     generateBtn.addEventListener('click', async () => {
-    lastGeneratedWithSlip = slipModeEl.checked; // onthoud slip state
+      lastGeneratedWithSlip = slipModeEl.checked; // onthoud slip state
       // reset buffers
       presetBuffers = [];
 
@@ -2007,7 +2190,7 @@ drawMiniFromBuffer(mini, preview, null, beats);
         const mini = card.querySelector('.mini-wave');
         if (presetBuffers[idx]) {
           const beats = presetBeats[idx] || 1;
-drawMiniFromBuffer(mini, presetBuffers[idx], null, beats);
+          drawMiniFromBuffer(mini, presetBuffers[idx], null, beats);
         }
       });
 
@@ -2056,6 +2239,10 @@ drawMiniFromBuffer(mini, presetBuffers[idx], null, beats);
 
     // Elke 2 seconden een bubble maken
     setInterval(createBubble, 2000);
+
+    document.addEventListener('click', () => {
+  document.querySelectorAll('.beat-popup').forEach(p => p.style.display = 'none');
+});
 
     loadNoiseBuffers();
     loadPresets();
