@@ -84,7 +84,6 @@
     }
 
     .section-title {
-      margin: 0 0 10px;
       display: flex;
       align-items: center;
       justify-content: space-between;
@@ -92,7 +91,7 @@
     }
 
     .section-title h2 {
-      margin: 0;
+      margin: 10px;
       font-size: 22px;
       font-family: Oswald, sans-serif;
       font-weight: 600;
@@ -410,7 +409,7 @@
       border-radius: 16px;
       padding: 14px;
       display: grid;
-      gap: 10px;
+      gap: 14px;
       box-shadow: var(--shadow);
       transition: background 0.6s ease, opacity 0.6s ease;
     }
@@ -422,7 +421,7 @@
 
     .preset-card h3 {
       margin: 0;
-      font-size: 18px;
+      font-size: 20px;
       font-family: Oswald, sans-serif;
     }
 
@@ -484,6 +483,8 @@
     .preset-card .pname,
     .preset-card .meta b,
     .preset-card .duration {
+      display: flex;
+      align-items: center;
       opacity: 0.4;
       color: var(--muted);
       transition: color 0.6s ease, opacity 0.6s ease;
@@ -496,15 +497,19 @@
       color: #fff;
     }
 
+    .beat-icon {
+      display: flex;
+      align-items: center;
+    }
+
     .beat-icon img.beat-svg {
-      height: auto;
-      width: 22px;
+      width: 30px;
       opacity: 0.2;
       transition: opacity 0.6s ease;
     }
 
     .preset-card.enabled .beat-icon img.beat-svg {
-      opacity: 0.7;
+      opacity: 1;
     }
 
     .preset-card .beat-count {
@@ -537,6 +542,11 @@
       transition: opacity 0.6s ease;
     }
 
+    .playBtn.playing {
+  background: rgb(16, 102, 47); /* donkerder groen */
+  border-color: transparent;
+}
+
     .preset-card.enabled canvas {
       opacity: 1;
     }
@@ -548,6 +558,9 @@
     }
 
     .meta {
+      display: flex;
+      align-items: center;
+      gap: 5px;
       color: #6f6f6f;
       font-size: 13px;
     }
@@ -788,7 +801,6 @@
 
     @media (max-width: 600px) {
       .section-title {
-        flex-direction: column;
         align-items: initial;
       }
     }
@@ -902,7 +914,7 @@
         <div class="field switch-field">
           <span style="padding:7px" class="switch-label">Vinyl Noise</span>
           <label class="switch">
-            <input id="vinylNoise" type="checkbox" checked />
+            <input id="vinylNoise" type="checkbox"/>
             <span class="slider round"></span>
           </label>
         </div>
@@ -967,6 +979,10 @@
 
     let presetBuffers = [];
 
+    let presetBeats = [];
+
+    let lastGeneratedWithSlip = false; // onthoud slip state bij Generate
+
     const slipModeEl = document.getElementById('slipMode');
 
     const recStatus = document.getElementById('recStatus');
@@ -1006,7 +1022,7 @@
 
     // Vinyl Noise
     const vinylNoiseEl = document.getElementById('vinylNoise');
-    const VINYL_NOISE_VOLUME = 0.25; // hardcoded: lager = subtieler
+    const VINYL_NOISE_VOLUME = 0.20; // hardcoded: lager = subtieler
 
     let noiseBuffers = [];
 
@@ -1140,23 +1156,56 @@
       }
     }
 
-    function drawMiniFromBuffer(canvas, buffer, playPct = null) {
-      const dpr = fitCanvasToDisplay(canvas);
-      const ctx = canvas.getContext('2d');
-      const w = canvas.width, h = canvas.height;
-      ctx.clearRect(0, 0, w, h);
-      ctx.fillStyle = '#121212'; ctx.fillRect(0, 0, w, h);
-      if (!buffer) return;
-      const data = buffer.getChannelData(0);
-      const step = Math.max(1, Math.floor(data.length / w));
-      ctx.strokeStyle = '#16a34a'; ctx.lineWidth = Math.max(1, dpr);
-      ctx.shadowColor = '#22c55e4A';
-      ctx.shadowBlur = 8;
+    function drawMiniFromBuffer(canvas, buffer, playPct = null, beats = 1) {
+  const dpr = fitCanvasToDisplay(canvas);
+  const ctx = canvas.getContext('2d');
+  const w = canvas.width, h = canvas.height;
+  ctx.clearRect(0, 0, w, h);
+  ctx.fillStyle = '#121212';
+  ctx.fillRect(0, 0, w, h);
+  if (!buffer) return;
+
+  // waveform tekenen
+  const data = buffer.getChannelData(0);
+  const step = Math.max(1, Math.floor(data.length / w));
+  ctx.strokeStyle = '#16a34a';
+  ctx.lineWidth = Math.max(1, dpr);
+  ctx.shadowColor = '#22c55e4A';
+  ctx.shadowBlur = 8;
+  ctx.beginPath();
+  for (let x = 0; x < w; x++) {
+    const v = data[x * step] || 0;
+    const y = (1 - (v + 1) / 2) * h;
+    if (x === 0) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  }
+  ctx.stroke();
+
+  // beat-lijntjes tekenen (alleen als slip uit stond bij generate)
+  if (!lastGeneratedWithSlip && beats > 1) {
+    ctx.strokeStyle = 'rgba(255,255,255,0.25)';
+    ctx.lineWidth = 0.5 * dpr;
+    for (let b = 1; b < beats; b++) {
+      const x = Math.round((b / beats) * w);
       ctx.beginPath();
-      for (let x = 0; x < w; x++) { const v = data[x * step] || 0; const y = (1 - (v + 1) / 2) * h; if (x === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y); }
+      ctx.moveTo(x, 0);
+      ctx.lineTo(x, h);
       ctx.stroke();
-      if (playPct != null) { const x = clamp(Math.round(playPct * (w - 1)), 0, w - 1); ctx.strokeStyle = '#fff'; ctx.lineWidth = Math.max(1, dpr); ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, h); ctx.stroke(); }
     }
+  }
+
+  // playhead tekenen
+  if (playPct != null) {
+    const x = clamp(Math.round(playPct * (w - 1)), 0, w - 1);
+    ctx.strokeStyle = '#fff';
+    ctx.lineWidth = Math.max(1, dpr);
+    ctx.beginPath();
+    ctx.moveTo(x, 0);
+    ctx.lineTo(x, h);
+    ctx.stroke();
+  }
+}
+
 
     function drawCurve(canvas, arr, lo, hi, label) {
       const dpr = fitCanvasToDisplay(canvas);
@@ -1223,17 +1272,38 @@
 
     // ==== load / record
     async function loadArrayBuffer(arr, name = '') {
-      sampleBuffer = await audioCtx.decodeAudioData(arr);
-      originalSampleBuffer = sampleBuffer;
-      sampleFileName = name || 'Sample';
-      fileSubtitle.textContent = sampleFileName;
-      preStart = 0; preEnd = sampleBuffer.duration;
-      clipStart = 0; clipEnd = Math.min(0.10, sampleBuffer.duration);
-      recStatus.textContent = `Sample: ${sampleBuffer.duration.toFixed(2)}s @ ${sampleBuffer.sampleRate} Hz`;
-      prePlayBtn.disabled = false; commitPreBtn.disabled = false; reloadSampleBtn.disabled = false;
-      generateBtn.disabled = false;
-      drawPreWave(); drawMainWave(); updateLabels();
-    }
+  const decoded = await audioCtx.decodeAudioData(arr);
+
+  const maxDuration = 60; // seconds – change if you want longer
+  if (decoded.duration > maxDuration) {
+    recStatus.textContent = `❌ File too long (${decoded.duration.toFixed(1)}s). Max allowed is ${maxDuration}s.`;
+    return;
+  }
+
+  sampleBuffer = decoded;
+  originalSampleBuffer = sampleBuffer;
+  sampleFileName = name || 'Sample';
+  fileSubtitle.textContent = sampleFileName;
+
+  // Default to 1s preselection
+  preStart = 0;
+  preEnd = Math.min(1, sampleBuffer.duration);
+
+  // Default clip length (scratch area) – you can make it 1s too if you like
+  clipStart = 0;
+  clipEnd = Math.min(0.10, sampleBuffer.duration);
+
+  recStatus.textContent = `Sample: ${sampleBuffer.duration.toFixed(2)}s @ ${sampleBuffer.sampleRate} Hz`;
+
+  prePlayBtn.disabled = false;
+  commitPreBtn.disabled = false;
+  reloadSampleBtn.disabled = false;
+  generateBtn.disabled = false;
+
+  drawPreWave();
+  drawMainWave();
+  updateLabels();
+}
 
     dropzone.addEventListener('click', () => fileInput.click());
     browseLink.addEventListener('click', (e) => { e.stopPropagation(); fileInput.click(); });
@@ -1693,7 +1763,8 @@
 
         if (sampleBuffer) {
           const preview = synthesizePreviewBuffer(p);
-          drawMiniFromBuffer(mini, preview, null);
+          const beats = parseInt(p.duration, 10) || 1;
+drawMiniFromBuffer(mini, preview, null, beats);
         }
 
         const playBtn = node.querySelector('.playBtn');
@@ -1828,6 +1899,7 @@
           presetSrc = null;
           stopPlayhead();
           buttonEl.textContent = 'Play';
+          buttonEl.classList.remove('playing');
           return;
         }
 
@@ -1849,12 +1921,14 @@
           presetSrc = null;
           stopPlayhead();
           buttonEl.textContent = 'Play';
+          buttonEl.classList.remove('playing');
         };
 
         src.start();
         presetSrc = src;
 
         buttonEl.textContent = 'Stop';
+        buttonEl.classList.add('playing'); 
         startPlayhead('mini', rendered.duration, miniCanvas, i);
       } catch (err) {
         globalStatus.textContent = err.message;
@@ -1869,9 +1943,13 @@
       playhead.active = true; playhead.startAt = audioCtx.currentTime; playhead.duration = duration; playhead.where = where; playhead.canvas = canvas; playhead.miniIdx = miniIdx; if (rafId) cancelAnimationFrame(rafId);
       const tick = () => {
         const t = audioCtx.currentTime - playhead.startAt; if (t >= duration) { stopPlayhead(); onEnd && onEnd(); return; } if (where === 'main') drawMainWave(); else if (where === 'pre') drawPreWave(); else if (where === 'mini' && canvas) {
-          const buf = presetBuffers[miniIdx];  // use cached buffer
-          if (buf) drawMiniFromBuffer(canvas, buf, t / duration);
-        } rafId = requestAnimationFrame(tick);
+  const buf = presetBuffers[miniIdx];
+  if (buf) {
+    const beats = parseInt(presets[miniIdx].duration, 10) || 1;
+    drawMiniFromBuffer(canvas, buf, t / duration, beats);
+  }
+}
+ rafId = requestAnimationFrame(tick);
       };
       rafId = requestAnimationFrame(tick);
     }
@@ -1894,9 +1972,10 @@
       if (playhead.where === 'main') drawMainWave();
       if (playhead.where === 'pre') drawPreWave();
       if (playhead.where === 'mini' && playhead.canvas) {
-        const buf = presetBuffers[playhead.miniIdx];  // use cached buffer
-        if (buf) drawMiniFromBuffer(playhead.canvas, buf, null);
-      }
+  const buf = presetBuffers[playhead.miniIdx];
+  const beats = presetBeats[playhead.miniIdx] || 1;
+  if (buf) drawMiniFromBuffer(playhead.canvas, buf, null, beats);
+}
       playhead.where = 'none';
     }
 
@@ -1904,6 +1983,7 @@
     init();
 
     generateBtn.addEventListener('click', async () => {
+    lastGeneratedWithSlip = slipModeEl.checked; // onthoud slip state
       // reset buffers
       presetBuffers = [];
 
@@ -1912,6 +1992,7 @@
         try {
           const rendered = await renderEffectToBuffer(presets[i]);
           presetBuffers[i] = rendered;
+          presetBeats[i] = parseInt(presets[i].duration, 10) || 1;
         } catch (err) {
           presetBuffers[i] = null;
           console.error("Preset render failed:", err);
@@ -1925,7 +2006,8 @@
       presetGrid.querySelectorAll('.preset-card').forEach((card, idx) => {
         const mini = card.querySelector('.mini-wave');
         if (presetBuffers[idx]) {
-          drawMiniFromBuffer(mini, presetBuffers[idx]);
+          const beats = presetBeats[idx] || 1;
+drawMiniFromBuffer(mini, presetBuffers[idx], null, beats);
         }
       });
 
