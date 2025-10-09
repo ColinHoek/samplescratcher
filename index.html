@@ -296,7 +296,7 @@
       border: 1px solid var(--line);
       border-radius: 10px;
       height: 160px;
-      touch-action: none;
+      touch-action: auto;
     }
 
     /* Preselection – smaller, subtle */
@@ -1476,7 +1476,7 @@
     dropzone.addEventListener('dragover', (e) => { e.preventDefault(); dropzone.classList.add('hover'); });
     dropzone.addEventListener('dragleave', () => dropzone.classList.remove('hover'));
     dropzone.addEventListener('drop', async (e) => { e.preventDefault(); dropzone.classList.remove('hover'); const file = e.dataTransfer.files?.[0]; if (!file) return; const arr = await file.arrayBuffer(); await loadArrayBuffer(arr, file.name);});
-    fileInput.onchange = async (e) => { const file = e.target.files?.[0]; if (!file) return; const arr = await file.arrayBuffer(); await loadArrayBuffer(arr, file.name);};
+    fileInput.onchange = async (e) => { const file = e.target.files?.[0]; if (!file) return; const arr = await file.arrayBuffer(); await loadArrayBuffer(arr, file.name); document.querySelectorAll('canvas').forEach(c => c.style.setProperty('touch-action', 'none', 'important');};
 
     const startRecording = async () => {
       await audioCtx.resume();
