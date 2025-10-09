@@ -1476,8 +1476,18 @@
     dropzone.addEventListener('dragover', (e) => { e.preventDefault(); dropzone.classList.add('hover'); });
     dropzone.addEventListener('dragleave', () => dropzone.classList.remove('hover'));
     dropzone.addEventListener('drop', async (e) => { e.preventDefault(); dropzone.classList.remove('hover'); const file = e.dataTransfer.files?.[0]; if (!file) return; const arr = await file.arrayBuffer(); await loadArrayBuffer(arr, file.name);});
-    fileInput.onchange = async (e) => { const file = e.target.files?.[0]; if (!file) return; const arr = await file.arrayBuffer(); await loadArrayBuffer(arr, file.name); document.querySelectorAll('canvas').forEach(c => c.style.setProperty('touch-action', 'none', 'important');};
+    fileInput.onchange = async (e) => {
+  const file = e.target.files?.[0];
+  if (!file) return;
 
+  const arr = await file.arrayBuffer();
+  await loadArrayBuffer(arr, file.name);
+
+  // ➕ Disable touch gestures on all canvases
+  document.querySelectorAll('canvas').forEach(c => {
+    c.style.touchAction = 'none';
+  });
+};
     const startRecording = async () => {
       await audioCtx.resume();
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
