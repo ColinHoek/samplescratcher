@@ -34,6 +34,7 @@
     body {
       height: 100%;
       margin: 0;
+      overscroll-behavior: none;
     }
 
     body {
@@ -43,7 +44,6 @@
       background-attachment: fixed;
       background-repeat: no-repeat;
       background-size: 100% 100%;
-
     }
 
     header {
@@ -185,6 +185,10 @@
       cursor: pointer;
     }
 
+    .no-hover:hover {
+      transform: translateY(0px);
+    }
+
     button:hover {
       transform: translateY(-1px);
     }
@@ -292,7 +296,12 @@
       border: 1px solid var(--line);
       border-radius: 10px;
       height: 160px;
-      touch-action: pan-y;
+      touch-action: auto;
+    }
+
+    body.has-audio #waveCanvas,
+    body.has-audio #preCanvas {
+      touch-action: none;
     }
 
     /* Preselection – smaller, subtle */
@@ -442,6 +451,10 @@
       display: block;
     }
 
+    .mini-wrap canvas.mini-wave {
+      touch-action: auto !important;
+    }
+
     .curve-vis {
       display: grid;
       grid-template-columns: 1fr 1fr;
@@ -519,6 +532,25 @@
       opacity: 0;
       transform: scale(0.8);
       transition: opacity 0.2s, transform 0.2s;
+    }
+
+    .option-menu,
+    .beat-options {
+      position: fixed;
+      top: -9999px;
+      left: -9999px;
+      opacity: 0;
+      pointer-events: none;
+      transform: scale(0.8);
+    }
+
+    .option-menu.show,
+    .beat-options.show {
+      opacity: 1;
+      pointer-events: auto;
+      transform: scale(1);
+      top: auto;
+      left: auto;
     }
 
     .beat-popup {
@@ -849,6 +881,79 @@
       /* Aspect ratio behouden */
     }
 
+    /* --- Option pill --- */
+    .option-pill {
+      background: transparent;
+      color: #a7a7a7;
+      border: 1px solid #a7a7a7;
+      border-radius: 999px;
+      font-size: 0.8rem;
+      padding: 4px 10px;
+      margin-right: auto;
+      cursor: pointer;
+      opacity: 0.4;
+      transition: opacity 0.4s ease;
+    }
+
+    .option-pill.hidden {
+      display: none;
+    }
+
+    /* --- Dropdown menu voor de opties --- */
+    .option-menu {
+      position: absolute;
+      display: flex;
+      flex-direction: column;
+      background: rgba(20, 20, 20, 0.95);
+      border: 1px solid #333;
+      border-radius: 20px;
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.5);
+      padding: 6px;
+      z-index: 9999;
+      opacity: 0;
+      transform: scale(0.95);
+      pointer-events: none;
+      transition: opacity 0.2s, transform 0.2s;
+    }
+
+    .option-menu.show {
+      opacity: 1;
+      transform: scale(1);
+      pointer-events: auto;
+    }
+
+    .option-menu button {
+      background: transparent;
+      border: 1px solid transparent;
+      color: #fff;
+      font-size: 0.85rem;
+      padding: 6px 12px;
+      text-align: left;
+      cursor: pointer;
+      border-radius: 999px;
+      transition: border-color 0.2s, background 0.2s;
+    }
+
+    .preset-card.enabled .option-pill {
+      color: #ffffff;
+      border: 1px solid #ffffff;
+      opacity: 1;
+    }
+
+    .option-menu button:hover {
+      border-color: rgba(255, 255, 255, 0.3);
+    }
+
+    .option-menu button.selected {
+      border-color: #fff;
+    }
+
+    @media (max-width: 600px) {
+      .beat-options {
+        left: 200px !important;
+      }
+    }
+
     @media (max-width: 600px) {
       #generateBtn {
         display: block;
@@ -921,7 +1026,7 @@
           <button id="recordBtn" class="round-icon" title="Record"><span class="record-dot"></span></button>
           <button id="stopBtn" class="round-icon" title="Stop" disabled><span class="stop-square"></span></button>
         </div>
-        <div class="rec-status" id="recStatus">No sample loaded…</div>
+        <div class="rec-status" id="recStatus">No sample loaded or recorded…</div>
       </div>
     </section>
 
@@ -970,15 +1075,15 @@
           <input id="bpm" type="number" value="120" min="40" max="300" step="1" />
         </div>
         <div class="field switch-field">
-          <span style=" padding:7px" class="switch-label">Slip Mode</span>
-          <label class="switch">
+          <span style=" padding:7px" class="switch-label">Continue Playback</span>
+          <label class="switch" title="Continue Playback after Scratching">
             <input id="slipMode" type="checkbox" />
             <span class="slider round"></span>
           </label>
         </div>
         <div class="field switch-field">
           <span style="padding:7px" class="switch-label">Vinyl Noise</span>
-          <label class="switch">
+          <label class="switch" title="Scratch with Dusty Vinyl">
             <input id="vinylNoise" type="checkbox" />
             <span class="slider round"></span>
           </label>
@@ -1001,7 +1106,8 @@
     <div class="preset-card">
       <div class="section-title">
         <h3 class="pname"></h3>
-        <span class="beat-icon"></span>
+        <button class="option-pill hidden no-hover" title="Variation">Option</button>
+        <span class="beat-icon" title="Beat(s)"></span>
       </div>
       <div class="mini-wrap">
         <canvas class="mini-wave" width="300" height="54"></canvas>
@@ -1374,8 +1480,8 @@
     browseLink.addEventListener('click', (e) => { e.stopPropagation(); fileInput.click(); });
     dropzone.addEventListener('dragover', (e) => { e.preventDefault(); dropzone.classList.add('hover'); });
     dropzone.addEventListener('dragleave', () => dropzone.classList.remove('hover'));
-    dropzone.addEventListener('drop', async (e) => { e.preventDefault(); dropzone.classList.remove('hover'); const file = e.dataTransfer.files?.[0]; if (!file) return; const arr = await file.arrayBuffer(); await loadArrayBuffer(arr, file.name); });
-    fileInput.onchange = async (e) => { const file = e.target.files?.[0]; if (!file) return; const arr = await file.arrayBuffer(); await loadArrayBuffer(arr, file.name); };
+    dropzone.addEventListener('drop', async (e) => { e.preventDefault(); dropzone.classList.remove('hover'); const file = e.dataTransfer.files?.[0]; if (!file) return; const arr = await file.arrayBuffer(); await loadArrayBuffer(arr, file.name); document.body.classList.add('has-audio'); });
+    fileInput.onchange = async (e) => { const file = e.target.files?.[0]; if (!file) return; const arr = await file.arrayBuffer(); await loadArrayBuffer(arr, file.name); document.body.classList.add('has-audio'); };
 
     const startRecording = async () => {
       await audioCtx.resume();
@@ -1675,8 +1781,10 @@
 
       const sr = sampleBuffer.sampleRate;
       const scratchSamples = Math.max(1, Math.floor(scratchDur * sr));
-      const scratchCurve = curveFromFormula(preset.scratchFormula, scratchSamples, -1, 1);
-      const gainCurve = curveFromFormula(preset.gainFormula, scratchSamples, 0, 1);
+      const scratchFormula = preset.activeScratchFormula || preset.scratchFormula;
+      const gainFormula = preset.activeGainFormula || preset.gainFormula;
+      const scratchCurve = curveFromFormula(scratchFormula, scratchSamples, -1, 1);
+      const gainCurve = curveFromFormula(gainFormula, scratchSamples, 0, 1);
 
       const sStart = Math.floor(clipStart * sr);
       const sEnd = Math.floor(clipEnd * sr);
@@ -1781,6 +1889,13 @@
       try {
         const res = await fetch("scratches.json");
         presets = await res.json();
+
+        // ✅ Zet standaard actieve formules
+        presets.forEach(p => {
+          p.activeScratchFormula = p.scratchFormula;
+          p.activeGainFormula = p.gainFormula;
+        });
+
         console.log("Scratch curves loaded:", presets);
 
         // Now initialize UI only after presets exist
@@ -1796,7 +1911,7 @@
       drawPreWave();
       drawMainWave();
       updateLabels();
-      renderPresetGrid();   // <-- now this has data
+      renderPresetGrid();
       recControls.classList.add('idle');
       setPreBtnState('play');
     }
@@ -1804,7 +1919,7 @@
     async function renderPresetGrid() {
       presetGrid.innerHTML = '';
 
-      // --- create ONE global popup and reuse it ---
+      // --- één globale popup voor beats ---
       let options = document.querySelector('.beat-options');
       if (!options) {
         options = document.createElement('div');
@@ -1828,7 +1943,6 @@
           transition: "opacity 0.2s ease, transform 0.2s ease"
         });
 
-        // add beat icons once
         [1, 2, 3, 4].forEach(optBeat => {
           const opt = document.createElement('img');
           opt.src = `icons/beat-${optBeat}.svg`;
@@ -1844,27 +1958,122 @@
       presets.forEach((p, idx) => {
         const node = presetCardTpl.content.cloneNode(true);
         const card = node.querySelector('.preset-card');
-        node.querySelector('.pname').textContent = p.name;
+        const pnameEl = node.querySelector('.pname');
+        pnameEl.textContent = p.name;
 
+        // === OPTIE-PILL DROPDOWN ===
+        const pill = node.querySelector('.option-pill');
+        const optionsList = Object.keys(p)
+          .filter(k => k.toLowerCase().startsWith('option'))
+          .map(k => p[k])
+          .filter(Boolean);
+
+        if (optionsList.length > 1) {
+          pill.classList.remove('hidden');
+          const lastChoice = p.selectedOption;
+          const defaultOption = lastChoice || p.defaultOption || optionsList[0];
+          pill.textContent = defaultOption;
+
+          const index = optionsList.indexOf(defaultOption);
+          p.activeScratchFormula = p[`scratchFormula${index === 0 ? '' : index + 1}`];
+          p.activeGainFormula = p[`gainFormula${index === 0 ? '' : index + 1}`];
+
+          // maak dropdown
+          const menu = document.createElement('div');
+          menu.className = 'option-menu';
+          optionsList.forEach(opt => {
+            const btn = document.createElement('button');
+            btn.textContent = opt;
+            btn.addEventListener('click', async () => {
+              pill.textContent = opt;
+              p.selectedOption = opt;
+              menu.classList.remove('show');
+
+              // verwijder vorige selectie
+              menu.querySelectorAll('button').forEach(b => b.classList.remove('selected'));
+              btn.classList.add('selected'); // ✅ highlight gekozen optie
+
+              // stel juiste curves in
+              const index = optionsList.indexOf(opt);
+              p.activeScratchFormula = p[`scratchFormula${index === 0 ? '' : index + 1}`];
+              p.activeGainFormula = p[`gainFormula${index === 0 ? '' : index + 1}`];
+
+              // direct opnieuw renderen
+              try {
+                const rendered = await renderEffectToBuffer(p);
+                presetBuffers[idx] = rendered;
+
+                const durationEl = card.querySelector('.duration');
+                if (rendered) durationEl.textContent = `${rendered.duration.toFixed(2)}s`;
+
+                const mini = card.querySelector('.mini-wave');
+                const beats = parseInt(p.duration, 10) || 1;
+                drawMiniFromBuffer(mini, rendered, null, beats);
+
+                globalStatus.textContent = `${p.name} (${opt}) updated`;
+              } catch (err) {
+                console.error("Re-render failed:", err);
+                globalStatus.textContent = `⚠️ Render failed for ${p.name}`;
+              }
+            });
+            menu.appendChild(btn);
+          });
+          document.body.appendChild(menu);
+
+          // klikgedrag pill
+          pill.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const rect = pill.getBoundingClientRect();
+            menu.style.top = `${rect.bottom + window.scrollY + 6}px`;
+            menu.style.left = `${rect.left + window.scrollX}px`;
+
+            const activeOpt = p.selectedOption || defaultOption;
+            menu.querySelectorAll('button').forEach(b => {
+              if (b.textContent.trim() === activeOpt) {
+                b.classList.add('selected');
+              } else {
+                b.classList.remove('selected');
+              }
+            });
+
+            if (!menu.classList.contains('show')) {
+              menu.classList.add('show');
+            } else {
+              menu.classList.remove('show');
+              menu.style.top = '-9999px';
+              menu.style.left = '-9999px';
+            }
+          });
+
+          // sluit menu bij klik buiten
+          document.addEventListener('click', () => {
+            menu.classList.remove('show');
+            menu.style.top = '-9999px';
+            menu.style.left = '-9999px';
+          });
+        } else {
+          pill.classList.add('hidden');
+          p.activeScratchFormula = p.scratchFormula;
+          p.activeGainFormula = p.gainFormula;
+        }
+
+        // === BEAT SELECTOR ===
         const beats = parseInt(p.duration, 10) || 1;
         const currentBeat = presetBeats[idx] || beats;
         const beatIconWrap = node.querySelector('.beat-icon');
 
-        // --- main beat icon ---
         beatIconWrap.innerHTML = `
       <img src="icons/beat-${currentBeat}.svg" alt="${currentBeat} beat" class="beat-svg">
     `;
-
-        // make beat icon clickable
         beatIconWrap.style.position = "relative";
         beatIconWrap.style.cursor = "pointer";
 
-        let activeBeatIcon = null; // track which card opened the popup
+        let activeBeatIcon = null;
 
         beatIconWrap.addEventListener("click", (e) => {
           e.stopPropagation();
 
-          // if clicking the same icon again → close it
+          // toggle popup
           if (activeBeatIcon === beatIconWrap) {
             options.style.opacity = "0";
             options.style.transform = "scale(0.8)";
@@ -1873,15 +2082,11 @@
             return;
           }
 
-          // otherwise open for this card
           activeBeatIcon = beatIconWrap;
-
-          // position popup
           const rect = beatIconWrap.getBoundingClientRect();
           options.style.top = (window.scrollY + rect.top - options.offsetHeight - 8) + "px";
           options.style.left = (window.scrollX + rect.left + rect.width / 2 - options.offsetWidth / 2) + "px";
 
-          // highlight correct beat
           const currentBeat = presetBeats[idx] || parseInt(p.duration, 10) || 1;
           options.querySelectorAll('img').forEach(img => {
             const optBeat = parseInt(img.alt, 10);
@@ -1894,12 +2099,11 @@
             }
           });
 
-          // show popup
           options.style.opacity = "1";
           options.style.transform = "scale(1)";
           options.style.pointerEvents = "auto";
 
-          // attach click handlers dynamically
+          // klik op beat icoon
           options.querySelectorAll('img').forEach(opt => {
             opt.onclick = async (ev) => {
               ev.stopPropagation();
@@ -1915,7 +2119,6 @@
                 console.error("Re-render failed:", err);
               }
 
-              // update duration + icon
               const durationEl = card.querySelector('.duration');
               if (presetBuffers[idx]) {
                 durationEl.textContent = `${presetBuffers[idx].duration.toFixed(2)}s`;
@@ -1929,7 +2132,6 @@
                 drawMiniFromBuffer(mini, presetBuffers[idx], null, optBeat);
               }
 
-              // close popup
               options.style.opacity = "0";
               options.style.transform = "scale(0.8)";
               options.style.pointerEvents = "none";
@@ -1938,25 +2140,22 @@
           });
         });
 
-        // --- duration label ---
+        // === duur + mini-wave ===
         if (presetBuffers[idx]) {
-          node.querySelector('.duration').textContent =
-            `${presetBuffers[idx].duration.toFixed(2)}s`;
+          node.querySelector('.duration').textContent = `${presetBuffers[idx].duration.toFixed(2)}s`;
         } else {
           const bpm = parseFloat(bpmEl.value || '120');
           const beatDur = 60 / (isFinite(bpm) ? bpm : 120);
-          node.querySelector('.duration').textContent =
-            `${(beatDur * currentBeat).toFixed(2)}s`;
+          node.querySelector('.duration').textContent = `${(beatDur * currentBeat).toFixed(2)}s`;
         }
 
-        // --- mini waveform preview ---
         const mini = node.querySelector('.mini-wave');
         if (sampleBuffer) {
           const preview = synthesizePreviewBuffer(p);
           drawMiniFromBuffer(mini, preview, null, currentBeat);
         }
 
-        // --- play / download handlers ---
+        // === knoppen ===
         const playBtn = node.querySelector('.playBtn');
         const dlBtn = node.querySelector('.dlBtn');
         playBtn.addEventListener('click', async () => {
@@ -1972,17 +2171,15 @@
         presetGrid.appendChild(node);
       });
 
-      // close popup when clicking outside
+      // sluit beat-popup bij klik buiten
       document.addEventListener('click', (e) => {
         if (!e.target.closest('.beat-options') && !e.target.closest('.beat-icon')) {
           options.style.opacity = "0";
           options.style.transform = "scale(0.8)";
           options.style.pointerEvents = "none";
-          activeBeatIcon = null;
         }
       });
     }
-
 
     function synthesizePreviewBuffer(preset) {
       if (!sampleBuffer) return null;
@@ -1994,8 +2191,10 @@
 
       const sr = sampleBuffer.sampleRate;
       const scratchSamples = Math.max(1, Math.floor(scratchDur * sr));
-      const scratchCurve = curveFromFormula(preset.scratchFormula, scratchSamples, -1, 1);
-      const gainCurve = curveFromFormula(preset.gainFormula, scratchSamples, 0, 1);
+      const scratchFormula = preset.activeScratchFormula || preset.scratchFormula;
+      const gainFormula = preset.activeGainFormula || preset.gainFormula;
+      const scratchCurve = curveFromFormula(scratchFormula, scratchSamples, -1, 1);
+      const gainCurve = curveFromFormula(gainFormula, scratchSamples, 0, 1);
 
       const sStart = Math.floor(clipStart * sr);
       const sEnd = Math.floor(clipEnd * sr);
@@ -2213,8 +2412,12 @@
 
       // enable animaties
       requestAnimationFrame(() => {
-        document.querySelectorAll('.preset-actions').forEach((el, idx) => {
-          setTimeout(() => el.classList.add('enabled'), idx * 100);
+        document.querySelectorAll('.preset-card').forEach((card, idx) => {
+          setTimeout(() => {
+            card.classList.add('enabled');
+            const actions = card.querySelector('.preset-actions');
+            if (actions) actions.classList.add('enabled');
+          }, idx * 100);
         });
       });
 
