@@ -82,7 +82,7 @@
     .panel.elev {
       background: var(--panel-elev);
       box-shadow: var(--shadow);
-      border-color: #262626;
+      border-color: #222523;
       z-index: 3
     }
 
@@ -296,6 +296,11 @@
       border: 1px solid var(--line);
       border-radius: 10px;
       height: 160px;
+      touch-action: auto;
+    }
+
+    body.has-audio #waveCanvas,
+    body.has-audio #preCanvas {
       touch-action: none;
     }
 
@@ -865,7 +870,8 @@
     .logo-container {
       text-align: center;
       /* Logo horizontaal centreren */
-      padding: 30px 0;
+      padding-top: 30px;
+      padding-bottom: 30px;
       /* Boven- en onderruimte, pas aan naar wens */
     }
 
@@ -874,6 +880,64 @@
       /* Startwaarde voor grootte (pas aan) */
       height: auto;
       /* Aspect ratio behouden */
+    }
+
+    .spinning-bg {
+      position: absolute;
+      top: 170px;
+      /* centers vertically */
+      left: 50%;
+      /* centers horizontally */
+      width: 325px;
+      /* adjust for your design */
+      height: 325px;
+      transform: translate(-50%, -50%);
+      /* aligns center point */
+      opacity: 0.10;
+      z-index: -1;
+      animation: spin 20s linear infinite;
+      pointer-events: none;
+      /* don’t block clicks */
+    }
+
+    .spinning-center {
+      position: absolute;
+      top: 170px;
+      /* vertical center */
+      left: 50%;
+      /* horizontal center */
+      width: 325px;
+      height: 325px;
+      z-index: -1;
+      pointer-events: none;
+      /* allows clicks through */
+      transform: translate(-50%, -50%);
+      /* true centering magic */
+    }
+
+    .spinning-arm {
+      position: absolute;
+      top: 115px;
+      /* vertical center */
+      left: 50%;
+      /* horizontal center */
+      width: 300px;
+      height: 300px;
+      z-index: -2;
+      pointer-events: none;
+      /* allows clicks through */
+      transform: translate(-50%, -50%);
+      /* true centering magic */
+    }
+
+    @keyframes spin {
+      from {
+        transform: translate(-50%, -50%) rotate(0deg);
+      }
+
+      to {
+        transform: translate(-50%, -50%) rotate(-360deg);
+      }
     }
 
     /* --- Option pill --- */
@@ -996,6 +1060,9 @@
 <body>
 
   <div class="logo-container">
+    <img src="icons/ss-ring.svg" alt="Spinning background" class="spinning-bg" />
+    <img src="icons/ss-center.svg" class="spinning-center" />
+    <img src="icons/ss-arm.svg" class="spinning-arm" />
     <a href="https://carpaudio.com/" aria-label="CARP Audio home">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1548.98 776.84" fill="white" role="img">
         <path
@@ -1079,7 +1146,7 @@
         <div class="field switch-field">
           <span style="padding:7px" class="switch-label">Vinyl Noise</span>
           <label class="switch" title="Scratch with Dusty Vinyl">
-            <input id="vinylNoise" type="checkbox" />
+            <input id="vinylNoise" type="checkbox" checked/>
             <span class="slider round"></span>
           </label>
         </div>
@@ -1440,9 +1507,9 @@
     async function loadArrayBuffer(arr, name = '') {
       const decoded = await audioCtx.decodeAudioData(arr);
 
-      const maxDuration = 60; // seconds – change if you want longer
-      if (decoded.duration > maxDuration) {
-        recStatus.textContent = `❌ File too long (${decoded.duration.toFixed(1)}s). Max allowed is ${maxDuration}s.`;
+      const maxSizeMB = 200;
+      if (arr.byteLength > maxSizeMB * 1024 * 1024) {
+        recStatus.textContent = `❌ File too large (${(arr.byteLength / 1024 / 1024).toFixed(1)} MB). Max allowed is ${maxSizeMB} MB.`;
         return;
       }
 
@@ -1475,9 +1542,9 @@
     browseLink.addEventListener('click', (e) => { e.stopPropagation(); fileInput.click(); });
     dropzone.addEventListener('dragover', (e) => { e.preventDefault(); dropzone.classList.add('hover'); });
     dropzone.addEventListener('dragleave', () => dropzone.classList.remove('hover'));
-    dropzone.addEventListener('drop', async (e) => { e.preventDefault(); dropzone.classList.remove('hover'); const file = e.dataTransfer.files?.[0]; if (!file) return; const arr = await file.arrayBuffer(); await loadArrayBuffer(arr, file.name);});
-    fileInput.onchange = async (e) => { const file = e.target.files?.[0]; if (!file) return; const arr = await file.arrayBuffer(); await loadArrayBuffer(arr, file.name);};
-    
+    dropzone.addEventListener('drop', async (e) => { e.preventDefault(); dropzone.classList.remove('hover'); const file = e.dataTransfer.files?.[0]; if (!file) return; const arr = await file.arrayBuffer(); await loadArrayBuffer(arr, file.name); document.body.classList.add('has-audio'); });
+    fileInput.onchange = async (e) => { const file = e.target.files?.[0]; if (!file) return; const arr = await file.arrayBuffer(); await loadArrayBuffer(arr, file.name); document.body.classList.add('has-audio'); };
+
     const startRecording = async () => {
       await audioCtx.resume();
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -1845,33 +1912,41 @@
       }
 
       // === Stap 3: Slip Mode continuation ===
-      if (slipModeEl.checked) {
-        const slipRemaining = Math.max(0, scratchInput.length - Math.floor(lastPos));
-        const slipSamples = slipRemaining;
+      // === Step 3: Slip Mode continuation (play scratch, then from start of scratch to end of preselection) ===
+if (slipModeEl.checked) {
+  const sr = scratchInput.sampleRate;
 
-        const extended = new AudioBuffer({
-          length: out.length + slipSamples,
-          numberOfChannels: out.numberOfChannels,
-          sampleRate: sr
-        });
+  // Calculate lengths
+  const scratchLen = out.length;
+  const normalStart = Math.floor(clipStart * sr);
+  const normalEnd = Math.floor(preEnd * sr);
+  const normalLen = normalEnd - normalStart;
 
-        // Copy scratch part
-        for (let c = 0; c < out.numberOfChannels; c++) {
-          extended.getChannelData(c).set(out.getChannelData(c), 0);
-        }
+  // Make new buffer big enough for scratch + normal continuation
+  const extended = new AudioBuffer({
+    length: scratchLen + normalLen,
+    numberOfChannels: out.numberOfChannels,
+    sampleRate: sr
+  });
 
-        // Fill slip continuation
-        for (let c = 0; c < out.numberOfChannels; c++) {
-          const inData = scratchInput.getChannelData(c);
-          const extData = extended.getChannelData(c);
-          let pos = Math.floor(lastPos);
-          for (let i = 0; i < slipSamples; i++) {
-            extData[out.length + i] = inData[pos + i] || 0;
-          }
-        }
+  // Copy scratch effect
+  for (let c = 0; c < out.numberOfChannels; c++) {
+    extended.getChannelData(c).set(out.getChannelData(c), 0);
+  }
 
-        out = extended;
-      }
+  // Append clean playback from clipStart → preEnd
+  for (let c = 0; c < out.numberOfChannels; c++) {
+    const inData = scratchInput.getChannelData(c);
+    const extData = extended.getChannelData(c);
+
+    for (let i = 0; i < normalLen; i++) {
+      const srcIdx = normalStart + i;
+      extData[scratchLen + i] = inData[srcIdx] || 0;
+    }
+  }
+
+  out = extended;
+}
 
       // === Stap 4: render in OfflineAudioContext ===
       return out;
@@ -2238,33 +2313,42 @@
       }
 
       // === Stap 3: Slip Mode continuation (ook in preview!) ===
-      if (slipModeEl.checked) {
-        const slipRemaining = Math.max(0, scratchInput.length - Math.floor(lastPos));
-        const slipSamples = slipRemaining;
+      // === Step 3: Slip Mode continuation (play scratch, then from start of scratch to end of preselection) ===
+if (slipModeEl.checked) {
+  const sr = scratchInput.sampleRate;
 
-        const extended = audioCtx.createBuffer(
-          out.numberOfChannels,
-          out.length + slipSamples,
-          sr
-        );
+  // Calculate lengths
+  const scratchLen = out.length;
+  const normalStart = Math.floor(clipStart * sr);
+  const normalEnd = Math.floor(preEnd * sr);
+  const normalLen = normalEnd - normalStart;
 
-        // Copy scratch part
-        for (let c = 0; c < out.numberOfChannels; c++) {
-          extended.getChannelData(c).set(out.getChannelData(c), 0);
-        }
+  // Make new buffer big enough for scratch + normal continuation
+  const extended = new AudioBuffer({
+    length: scratchLen + normalLen,
+    numberOfChannels: out.numberOfChannels,
+    sampleRate: sr
+  });
 
-        // Fill slip continuation
-        for (let c = 0; c < out.numberOfChannels; c++) {
-          const inData = scratchInput.getChannelData(c);
-          const extData = extended.getChannelData(c);
-          let pos = Math.floor(lastPos);
-          for (let i = 0; i < slipSamples; i++) {
-            extData[out.length + i] = inData[pos + i] || 0;
-          }
-        }
+  // Copy scratch effect
+  for (let c = 0; c < out.numberOfChannels; c++) {
+    extended.getChannelData(c).set(out.getChannelData(c), 0);
+  }
 
-        out = extended;
-      }
+  // Append clean playback from clipStart → preEnd
+  for (let c = 0; c < out.numberOfChannels; c++) {
+    const inData = scratchInput.getChannelData(c);
+    const extData = extended.getChannelData(c);
+
+    for (let i = 0; i < normalLen; i++) {
+      const srcIdx = normalStart + i;
+      extData[scratchLen + i] = inData[srcIdx] || 0;
+    }
+  }
+
+  out = extended;
+}
+
 
       return out;
     }
