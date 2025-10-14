@@ -35,6 +35,7 @@
       height: 100%;
       margin: 0;
       overscroll-behavior: none;
+      touch-action: manipulation;
     }
 
     body {
@@ -91,6 +92,13 @@
       align-items: center;
       justify-content: space-between;
       gap: 10px;
+    }
+
+    .section-title .left-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      /* spacing between name, pill, and reload */
     }
 
     .section-title h2 {
@@ -176,7 +184,7 @@
       padding: 10px 14px;
       border-radius: 999px;
       border: 1px solid var(--line);
-      background: #0a0a0a;
+      background: #101010;
       color: var(--text);
       transition: transform .12s ease, background .18s ease, box-shadow .18s ease, border-color .18s ease;
     }
@@ -512,6 +520,7 @@
     .beat-icon {
       display: flex;
       align-items: center;
+      pointer-events: none;
     }
 
     .beat-icon img.beat-svg {
@@ -597,6 +606,10 @@
       opacity: 1;
     }
 
+    .preset-card.enabled .beat-icon {
+      pointer-events: auto;
+    }
+
     .preset-card .beat-count {
       font-weight: 700;
       font-size: 13px;
@@ -623,7 +636,7 @@
     }
 
     .preset-card canvas {
-      opacity: 0.3;
+      opacity: 0;
       transition: opacity 0.6s ease;
     }
 
@@ -891,6 +904,7 @@
       padding: 4px 10px;
       margin-right: auto;
       cursor: pointer;
+      pointer-events: none;
       opacity: 0.4;
       transition: opacity 0.4s ease;
     }
@@ -937,6 +951,7 @@
     .preset-card.enabled .option-pill {
       color: #ffffff;
       border: 1px solid #ffffff;
+      pointer-events: auto;
       opacity: 1;
     }
 
@@ -946,6 +961,33 @@
 
     .option-menu button.selected {
       border-color: #fff;
+    }
+
+    .reload-btn {
+      background: transparent;
+      border: none;
+      padding: 0px;
+      cursor: pointer;
+      opacity: 0.05;
+      pointer-events: none;
+      transition: opacity 0.2s ease;
+    }
+
+    /* When the preset is enabled */
+    .preset-card.enabled .reload-btn {
+      opacity: 0.5;
+      pointer-events: auto;
+    }
+
+    .preset-card.enabled .reload-btn:hover {
+      opacity: 1;
+    }
+
+    .reload-btn svg {
+      width: 18px;
+      height: 18px;
+      display: block;
+      fill: #fff;
     }
 
     @media (max-width: 600px) {
@@ -1029,9 +1071,7 @@
     <section class="panel" id="prePanel">
       <div class="section-title">
         <h2 id="fileSubtitle"></h2>
-        <div class="row" style="
-    margin-bottom: 10px;
-">
+        <div class="row" style="margin-bottom: 10px;">
           <button id="reloadSampleBtn" class="tiny pill ghost" disabled>Reset</button>
           <button id="commitPreBtn" class="tiny pill primary" disabled>Cut Sample</button>
           <button id="prePlayBtn" class="round-icon small" title="Preview" disabled>
@@ -1041,9 +1081,9 @@
       </div>
       <canvas id="preCanvas" width="900" height="80"></canvas>
       <div class="handles">
-        <span>Cut start: <span id="preStartLbl">0.00s</span></span>
+        <span>Start: <span id="preStartLbl">0.00s</span></span>
         <span class="center">Length: <span id="preLenLbl" class="value">0.00s</span></span>
-        <span>Cut end: <span id="preEndLbl">0.00s</span></span>
+        <span>End: <span id="preEndLbl">0.00s</span></span>
       </div>
     </section>
 
@@ -1085,12 +1125,12 @@
           </label>
         </div>
         <div class="field switch-field">
-  <span style="padding:7px" class="switch-label">Humanize</span>
-  <label class="switch" title="Add subtle human imperfections to scratching">
-    <input id="humanizeScratch" type="checkbox" checked/>
-    <span class="slider round"></span>
-  </label>
-</div>
+          <span style="padding:7px" class="switch-label">Humanize</span>
+          <label class="switch" title="Add subtle human imperfections to scratching">
+            <input id="humanizeScratch" type="checkbox" checked />
+            <span class="slider round"></span>
+          </label>
+        </div>
         <button id="generateBtn" class="primary"
           style="font-size:20px; margin-left:auto; margin-right: 3px; padding:10px 90px 10px 90px; border-radius:999px; font-family: Oswald, sans-serif;"
           disabled>
@@ -1108,8 +1148,16 @@
   <template id="presetCardTpl">
     <div class="preset-card">
       <div class="section-title">
-        <h3 class="pname"></h3>
-        <button class="option-pill hidden no-hover" title="Variation">Option</button>
+        <div class="left-group">
+          <h3 class="pname"></h3>
+          <button class="option-pill hidden no-hover" title="Variation">Option</button>
+          <button class="reload-btn no-hover" title="Render Again">
+            <svg width="800px" height="800px" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg" fill="none">
+              <path fill="#ffffff"
+                d="M7.248 1.307A.75.75 0 118.252.193l2.5 2.25a.75.75 0 010 1.114l-2.5 2.25a.75.75 0 01-1.004-1.114l1.29-1.161a4.5 4.5 0 103.655 2.832.75.75 0 111.398-.546A6 6 0 118.018 2l-.77-.693z" />
+            </svg>
+          </button>
+        </div>
         <span class="beat-icon" title="Beat(s)"></span>
       </div>
       <div class="mini-wrap">
@@ -1196,6 +1244,40 @@
 
     const humanizeScratchEl = document.getElementById('humanizeScratch');
 
+    // === Make BPM field draggable (scrubbable) ===
+    let bpmDragActive = false;
+    let bpmStartY = 0;
+    let bpmStartValue = 0;
+
+    bpmEl.style.cursor = 'ns-resize'; // up/down cursor for hint
+
+    bpmEl.addEventListener('mousedown', (e) => {
+      if (e.button !== 0) return; // left-click only
+      bpmDragActive = true;
+      bpmStartY = e.clientY;
+      bpmStartValue = parseFloat(bpmEl.value) || 120;
+      document.body.style.userSelect = 'none'; // prevent text highlighting
+    });
+
+    window.addEventListener('mousemove', (e) => {
+      if (!bpmDragActive) return;
+
+      const deltaY = bpmStartY - e.clientY; // dragging up increases BPM
+      const sensitivity = 0.25; // adjust for finer or faster control
+      let newBpm = bpmStartValue + deltaY * sensitivity;
+
+      newBpm = Math.round(newBpm);
+      newBpm = Math.max(40, Math.min(300, newBpm)); // clamp to input range
+      bpmEl.value = newBpm;
+    });
+
+    window.addEventListener('mouseup', () => {
+      if (bpmDragActive) {
+        bpmDragActive = false;
+        document.body.style.userSelect = '';
+      }
+    });
+
     // Vinyl Noise
     const vinylNoiseEl = document.getElementById('vinylNoise');
     const VINYL_NOISE_VOLUME = 0.20; // hardcoded: lager = subtieler
@@ -1233,9 +1315,13 @@
       clipStartLbl.textContent = (clipStart || 0).toFixed(2) + 's';
       clipEndLbl.textContent = (clipEnd || 0).toFixed(2) + 's';
       clipLenLbl.textContent = Math.max(0, (clipEnd - clipStart)).toFixed(2) + 's';
+
       preStartLbl.textContent = (preStart || 0).toFixed(2) + 's';
       preEndLbl.textContent = (preEnd || 0).toFixed(2) + 's';
-      preLenLbl.textContent = Math.max(0, (preEnd - preStart)).toFixed(2) + 's';
+
+      const preLen = Math.max(0, (preEnd - preStart));
+      const lenStr = preLen.toFixed(2) + 's';
+      preLenLbl.textContent = (Math.abs(preLen - 10) < 0.005) ? `${lenStr} (Max)` : lenStr;
     }
 
     // ==== drawing
@@ -1452,7 +1538,7 @@
 
       const maxSizeMB = 200;
       if (arr.byteLength > maxSizeMB * 1024 * 1024) {
-        recStatus.textContent = `❌ File too large (${(arr.byteLength / 1024 / 1024).toFixed(1)} MB). Max allowed is ${maxSizeMB} MB.`;
+        recStatus.textContent = `File too large (${(arr.byteLength / 1024 / 1024).toFixed(1)} MB). Max allowed is ${maxSizeMB} MB.`;
         return;
       }
 
@@ -1461,34 +1547,83 @@
       sampleFileName = name || 'Sample';
       fileSubtitle.textContent = sampleFileName;
 
-      // Default to 1s preselection
+      // default selection
       preStart = 0;
       preEnd = Math.min(1, sampleBuffer.duration);
-
-      // Default clip length (scratch area) – you can make it 1s too if you like
       clipStart = 0;
       clipEnd = Math.min(0.10, sampleBuffer.duration);
 
-      recStatus.textContent = `Sample: ${sampleBuffer.duration.toFixed(2)}s @ ${sampleBuffer.sampleRate} Hz`;
+      // === enforce 10-second rule ===
+      if (sampleBuffer.duration > 10) {
+        recStatus.innerHTML = 'Please cut a sample from the audio file! (<span style="color:#22c55e;">Max 10s</span>)';
+        disableScratchArea(true);        // hide / disable scratch canvas
+        commitPreBtn.disabled = false;
+        reloadSampleBtn.disabled = false;
+        prePlayBtn.disabled = false;
+        generateBtn.disabled = true;
 
-      prePlayBtn.disabled = false;
-      commitPreBtn.disabled = false;
-      reloadSampleBtn.disabled = false;
-      generateBtn.disabled = false;
+        // draw only the preselection waveform
+        drawPreWave();
 
-      updateTouchAction();
+        // clear scratch area so no waveform is visible
+        waveCtx.clearRect(0, 0, waveCanvas.width, waveCanvas.height);
+        waveCtx.fillStyle = '#121212';
+        waveCtx.fillRect(0, 0, waveCanvas.width, waveCanvas.height);
+        const message = 'Cut a sample from the audio file. (Max 10s)';
 
-      drawPreWave();
-      drawMainWave();
+        // Device pixel ratio for sharpness
+        const dpr = window.devicePixelRatio || 1;
+
+        // Smaller, more balanced font scaling
+        // ~12px on phones, ~16px on desktop (before DPR scaling)
+        const baseFont = window.innerWidth < 600 ? 12 : 16;
+        waveCtx.font = `${baseFont * dpr}px system-ui`;
+        waveCtx.fillStyle = '#777';
+
+        // Optional soft shadow for readability
+        waveCtx.shadowColor = 'rgba(0,0,0,0.3)';
+        waveCtx.shadowBlur = 2;
+
+        // Center message
+        const metrics = waveCtx.measureText(message);
+        const x = (waveCanvas.width - metrics.width) / 2;
+        const y = (waveCanvas.height / 2) + baseFont * dpr * 0.4;
+        waveCtx.fillText(message, x, y);
+
+        waveCtx.fillText(message, x, y);
+      } else {
+        recStatus.textContent = `Sample: ${sampleBuffer.duration.toFixed(2)}s @ ${sampleBuffer.sampleRate} Hz`;
+        disableScratchArea(false);
+        commitPreBtn.disabled = false;
+        reloadSampleBtn.disabled = false;
+        prePlayBtn.disabled = false;
+        generateBtn.disabled = false;
+
+        // draw both
+        drawPreWave();
+        drawMainWave();
+      }
+
       updateLabels();
+      updateTouchAction();
+    }
+
+    function disableScratchArea(disabled) {
+      const waveCanvas = document.getElementById('waveCanvas');
+      if (disabled) {
+        waveCanvas.style.pointerEvents = 'none';
+        generateBtn.disabled = true;
+      } else {
+        waveCanvas.style.pointerEvents = 'auto';
+      }
     }
 
     dropzone.addEventListener('click', () => fileInput.click());
     browseLink.addEventListener('click', (e) => { e.stopPropagation(); fileInput.click(); });
     dropzone.addEventListener('dragover', (e) => { e.preventDefault(); dropzone.classList.add('hover'); });
     dropzone.addEventListener('dragleave', () => dropzone.classList.remove('hover'));
-    dropzone.addEventListener('drop', async (e) => { e.preventDefault(); dropzone.classList.remove('hover'); const file = e.dataTransfer.files?.[0]; if (!file) return; const arr = await file.arrayBuffer(); await loadArrayBuffer(arr, file.name);});
-    fileInput.onchange = async (e) => { const file = e.target.files?.[0]; if (!file) return; const arr = await file.arrayBuffer(); await loadArrayBuffer(arr, file.name);};
+    dropzone.addEventListener('drop', async (e) => { e.preventDefault(); dropzone.classList.remove('hover'); const file = e.dataTransfer.files?.[0]; if (!file) return; const arr = await file.arrayBuffer(); await loadArrayBuffer(arr, file.name); });
+    fileInput.onchange = async (e) => { const file = e.target.files?.[0]; if (!file) return; const arr = await file.arrayBuffer(); await loadArrayBuffer(arr, file.name); };
 
     const startRecording = async () => {
       await audioCtx.resume();
@@ -1544,14 +1679,47 @@
     preCanvas.addEventListener('pointermove', (e) => {
       if (!preDragging) updatePreCursor(e);
       if (!sampleBuffer || !preDragging) return;
+
       const x = canvasEventX(e, preCanvas);
       const sec = xToSec(x, sampleBuffer.duration, preCanvas.width);
-      if (preDragging === 'start') preStart = Math.min(sec, preEnd - 0.005);
-      else if (preDragging === 'end') preEnd = Math.max(sec, preStart + 0.005);
-      else if (preDragging === 'move') { const width = preEnd - preStart; let ns = sec - width / 2; ns = clamp(ns, 0, (sampleBuffer.duration - width)); preStart = ns; preEnd = ns + width; }
-      else if (preDragging === 'new') { preEnd = Math.max(sec, 0); preStart = Math.min(sec, preStart); }
-      drawPreWave(); updateLabels();
+      const MAX_LEN = 10; // limit preselection to 10 seconds
+
+      if (preDragging === 'start') {
+        preStart = Math.min(sec, preEnd - 0.005);
+        if (preEnd - preStart > MAX_LEN) {
+          preStart = preEnd - MAX_LEN;
+        }
+      } else if (preDragging === 'end') {
+        preEnd = Math.max(sec, preStart + 0.005);
+        if (preEnd - preStart > MAX_LEN) {
+          preEnd = preStart + MAX_LEN;
+        }
+      } else if (preDragging === 'move') {
+        const width = Math.min(preEnd - preStart, MAX_LEN);
+        let ns = sec - width / 2;
+        ns = clamp(ns, 0, sampleBuffer.duration - width);
+        preStart = ns;
+        preEnd = ns + width;
+      } else if (preDragging === 'new') {
+        // new drag selection
+        preEnd = sec;
+        if (preEnd < preStart) {
+          [preStart, preEnd] = [preEnd, preStart];
+        }
+        // clamp if dragged too far
+        if (preEnd - preStart > MAX_LEN) {
+          preEnd = preStart + MAX_LEN;
+        }
+      }
+
+      // keep inside buffer duration
+      preStart = clamp(preStart, 0, sampleBuffer.duration);
+      preEnd = clamp(preEnd, 0, sampleBuffer.duration);
+
+      drawPreWave();
+      updateLabels();
     });
+
     preCanvas.addEventListener('pointerdown', (e) => { if (!sampleBuffer) return; preCanvas.setPointerCapture(e.pointerId); const x = canvasEventX(e, preCanvas); const ht = preHitTest(x); if (ht === 'new') { const sec = xToSec(x, sampleBuffer.duration, preCanvas.width); preStart = sec; preEnd = sec; } preDragging = ht; updatePreCursor(e); });
     preCanvas.addEventListener('pointerup', (e) => { preDragging = null; preCanvas.releasePointerCapture(e.pointerId); updatePreCursor(e); });
     preCanvas.addEventListener('pointerleave', () => { preDragging = null; preCanvas.style.cursor = 'crosshair'; });
@@ -1619,25 +1787,94 @@
 
     commitPreBtn.onclick = () => {
       if (!sampleBuffer) return;
-      const chs = sampleBuffer.numberOfChannels; const sr = sampleBuffer.sampleRate; const len = Math.max(1, Math.floor((preEnd - preStart) * sr)); const newBuf = new AudioBuffer({ length: len, numberOfChannels: chs, sampleRate: sr });
-      for (let ch = 0; ch < chs; ch++) { const inData = sampleBuffer.getChannelData(ch); const outData = newBuf.getChannelData(ch); const startIdx = Math.floor(preStart * sr); for (let i = 0; i < len; i++) { outData[i] = inData[startIdx + i] || 0; } }
-      sampleBuffer = newBuf; preStart = 0; preEnd = sampleBuffer.duration; clipStart = 0; clipEnd = Math.min(0.10, sampleBuffer.duration);
-      drawPreWave(); drawMainWave(); updateLabels(); globalStatus.textContent = 'Preselection applied as new sample';
-    };
 
-    reloadSampleBtn.onclick = () => {
-      if (!originalSampleBuffer) return;
-      sampleBuffer = originalSampleBuffer;   // restore
+      const chs = sampleBuffer.numberOfChannels;
+      const sr = sampleBuffer.sampleRate;
+      const len = Math.max(1, Math.floor((preEnd - preStart) * sr));
+
+      const newBuf = new AudioBuffer({ length: len, numberOfChannels: chs, sampleRate: sr });
+      for (let ch = 0; ch < chs; ch++) {
+        const inData = sampleBuffer.getChannelData(ch);
+        const outData = newBuf.getChannelData(ch);
+        const startIdx = Math.floor(preStart * sr);
+        for (let i = 0; i < len; i++) {
+          outData[i] = inData[startIdx + i] || 0;
+        }
+      }
+
+      sampleBuffer = newBuf;
       preStart = 0;
       preEnd = sampleBuffer.duration;
       clipStart = 0;
       clipEnd = Math.min(0.10, sampleBuffer.duration);
 
+      if (sampleBuffer.duration <= 10) {
+        recStatus.textContent = `Audio file has been cut to a ${sampleBuffer.duration.toFixed(2)}s sample.`;
+        disableScratchArea(false);
+        generateBtn.disabled = false;
+      } else {
+        recStatus.textContent = "Please cut the sample to 10 seconds or shorter.";
+        disableScratchArea(true);
+      }
+
       drawPreWave();
       drawMainWave();
       updateLabels();
-      globalStatus.textContent = 'Sample reloaded to original state';
     };
+
+    reloadSampleBtn.onclick = () => {
+      if (!originalSampleBuffer) return;
+
+      // Restore the full original audio for preselection
+      sampleBuffer = originalSampleBuffer;
+      preStart = 0;
+      preEnd = Math.min(1, sampleBuffer.duration);
+      clipStart = 0;
+      clipEnd = Math.min(0.10, sampleBuffer.duration);
+
+      // If file is longer than 10s → disable scratching again
+      if (sampleBuffer.duration > 10) {
+        recStatus.innerHTML = `Full file reloaded (${sampleBuffer.duration.toFixed(2)}s). Please cut a sample again! <span style="color:#22c55e;">(Max 10s)</span>`;
+        disableScratchArea(true);
+
+        // Clear the scratch waveform
+        waveCtx.clearRect(0, 0, waveCanvas.width, waveCanvas.height);
+        waveCtx.fillStyle = '#121212';
+        waveCtx.fillRect(0, 0, waveCanvas.width, waveCanvas.height);
+
+        const msg = 'Cut a sample from the audio file. (Max 10s)';
+
+// Device pixel ratio for sharpness
+const dpr = window.devicePixelRatio || 1;
+
+// Balanced font scaling: ~12px mobile, ~16px desktop
+const baseFont = window.innerWidth < 600 ? 12 : 16;
+waveCtx.font = `${baseFont * dpr}px system-ui`;
+waveCtx.fillStyle = '#777';
+
+// Optional shadow for readability
+waveCtx.shadowColor = 'rgba(0,0,0,0.3)';
+waveCtx.shadowBlur = 2;
+
+// Center text on canvas
+const metrics = waveCtx.measureText(msg);
+const x = (waveCanvas.width - metrics.width) / 2;
+const y = (waveCanvas.height / 2) + baseFont * dpr * 0.4;
+waveCtx.fillText(msg, x, y);
+
+        generateBtn.disabled = true;
+      } else {
+        // Short files can be used directly
+        recStatus.textContent = `Sample ready (${sampleBuffer.duration.toFixed(2)}s @ ${sampleBuffer.sampleRate}Hz)`;
+        disableScratchArea(false);
+        generateBtn.disabled = false;
+      }
+
+      drawPreWave();
+      updateLabels();
+      recStatus.textContent = `Full original file reloaded (${sampleBuffer.duration.toFixed(2)}s).`;
+    };
+
 
     // ==== main selection with play circle (no visible mid bar)
     let dragging = null; // 'start' | 'end' | 'move'
@@ -1792,10 +2029,10 @@
       const gainFormula = preset.activeGainFormula || preset.gainFormula;
       let scratchCurve = curveFromFormula(scratchFormula, scratchSamples, -1, 1);
 
-// Apply humanization if enabled
-if (humanizeScratchEl.checked) {
-  scratchCurve = humanizeScratchCurve(scratchCurve);
-}
+      // Apply humanization if enabled
+      if (humanizeScratchEl.checked) {
+        scratchCurve = humanizeScratchCurve(scratchCurve);
+      }
       const gainCurve = curveFromFormula(gainFormula, scratchSamples, 0, 1);
 
       const sStart = Math.floor(clipStart * sr);
@@ -2007,6 +2244,7 @@ if (humanizeScratchEl.checked) {
             btn.addEventListener('click', async () => {
               pill.textContent = opt;
               p.selectedOption = opt;
+              animatePresetReload(card);
               menu.classList.remove('show');
 
               // verwijder vorige selectie
@@ -2127,6 +2365,7 @@ if (humanizeScratchEl.checked) {
           options.querySelectorAll('img').forEach(opt => {
             opt.onclick = async (ev) => {
               ev.stopPropagation();
+              animatePresetReload(card);
               const optBeat = parseInt(opt.alt, 10);
 
               presets[idx].duration = optBeat;
@@ -2188,6 +2427,28 @@ if (humanizeScratchEl.checked) {
           await handlePlayPreset(idx, playBtn, mini);
         });
 
+        const reloadBtn = node.querySelector('.reload-btn');
+        reloadBtn.addEventListener('click', async (e) => {
+          animatePresetReload(card);
+          e.stopPropagation();
+          try {
+            const rendered = await renderEffectToBuffer(p);
+            presetBuffers[idx] = rendered;
+
+            const durationEl = card.querySelector('.duration');
+            durationEl.textContent = `${rendered.duration.toFixed(2)}s`;
+
+            const mini = card.querySelector('.mini-wave');
+            const beats = parseInt(p.duration, 10) || 1;
+            drawMiniFromBuffer(mini, rendered, null, beats);
+
+            globalStatus.textContent = `${p.name} reloaded.`;
+          } catch (err) {
+            console.error("Reload failed:", err);
+            globalStatus.textContent = `⚠️ Reload failed for ${p.name}`;
+          }
+        });
+
         presetGrid.appendChild(node);
       });
 
@@ -2215,9 +2476,9 @@ if (humanizeScratchEl.checked) {
       const gainFormula = preset.activeGainFormula || preset.gainFormula;
       let scratchCurve = curveFromFormula(scratchFormula, scratchSamples, -1, 1);
 
-if (humanizeScratchEl.checked) {
-  scratchCurve = humanizeScratchCurve(scratchCurve);
-}
+      if (humanizeScratchEl.checked) {
+        scratchCurve = humanizeScratchCurve(scratchCurve);
+      }
       const gainCurve = curveFromFormula(gainFormula, scratchSamples, 0, 1);
 
       const sStart = Math.floor(clipStart * sr);
@@ -2367,7 +2628,28 @@ if (humanizeScratchEl.checked) {
       }
     }
 
-    async function handleDownloadPreset(i) { try { const rendered = await renderEffectToBuffer(presets[i]); const wav = audioBufferToWav(rendered); const url = URL.createObjectURL(wav); const a = document.createElement('a'); a.href = url; a.download = `${presets[i].name.replace(/[^a-z0-9_-]+/ig, '_')}.wav`; a.click(); globalStatus.textContent = `${presets[i].name} downloaded`; } catch (err) { globalStatus.textContent = err.message; } }
+    async function handleDownloadPreset(i) {
+      try {
+        const rendered = await renderEffectToBuffer(presets[i]);
+        const wav = audioBufferToWav(rendered);
+        const url = URL.createObjectURL(wav);
+        const a = document.createElement('a');
+        a.href = url;
+
+        // 🔹 Get BPM value and sanitize name
+        const bpm = parseFloat(bpmEl.value || '120');
+        const bpmStr = isFinite(bpm) ? `${Math.round(bpm)}bpm` : 'bpm';
+        const presetName = presets[i].name.replace(/[^a-z0-9_-]+/ig, '_');
+
+        // 🔹 Include BPM in filename
+        a.download = `${presetName}_${bpmStr}.wav`;
+
+        a.click();
+        globalStatus.textContent = `${presets[i].name} downloaded at ${bpmStr}`;
+      } catch (err) {
+        globalStatus.textContent = err.message;
+      }
+    }
 
     function audioBufferToWav(buffer) { const numCh = buffer.numberOfChannels; const sampleRate = buffer.sampleRate; const length = buffer.length; const bps = 2; const blockAlign = numCh * bps; const byteRate = sampleRate * blockAlign; const dataSize = length * blockAlign; const total = 44 + dataSize; const ab = new ArrayBuffer(total); const dv = new DataView(ab); let p = 0; function w8(v) { dv.setUint8(p++, v); } function w16(v) { dv.setUint16(p, v, true); p += 2; } function w32(v) { dv.setUint32(p, v, true); p += 4; } w8(0x52); w8(0x49); w8(0x46); w8(0x46); w32(36 + dataSize); w8(0x57); w8(0x41); w8(0x56); w8(0x45); w8(0x66); w8(0x6d); w8(0x74); w8(0x20); w32(16); w16(1); w16(numCh); w32(sampleRate); w32(byteRate); w16(blockAlign); w16(16); w8(0x64); w8(0x61); w8(0x74); w8(0x61); w32(dataSize); const chans = []; for (let ch = 0; ch < numCh; ch++) chans.push(buffer.getChannelData(ch)); for (let i = 0; i < length; i++) { for (let ch = 0; ch < numCh; ch++) { let s = Math.max(-1, Math.min(1, chans[ch][i])); s = s < 0 ? s * 0x8000 : s * 0x7fff; dv.setInt16(p, s, true); p += 2; } } return new Blob([ab], { type: 'audio/wav' }); }
 
@@ -2415,8 +2697,16 @@ if (humanizeScratchEl.checked) {
     init();
 
     generateBtn.addEventListener('click', async () => {
-      lastGeneratedWithSlip = slipModeEl.checked; // onthoud slip state
-      // reset buffers
+      if (!sampleBuffer) {
+        recStatus.textContent = "No sample loaded.";
+        return;
+      }
+      if ((clipEnd - clipStart) <= 0) {
+        recStatus.textContent = "No audio selected for scratching.";
+        return;
+      }
+
+      lastGeneratedWithSlip = slipModeEl.checked;
       presetBuffers = [];
 
       // eerst echt renderen (met noise/slip/random)
@@ -2490,68 +2780,86 @@ if (humanizeScratchEl.checked) {
       }, duration * 1000);
     }
 
+    function animatePresetReload(card) {
+      if (!card) return;
+      // temporarily disable & fade out
+      card.classList.remove('enabled');
+      const actions = card.querySelector('.preset-actions');
+      if (actions) actions.classList.remove('enabled');
+      card.style.pointerEvents = 'none';
+
+      // fade-out animation (already in CSS transition)
+      setTimeout(() => {
+        // re-enable visually after delay
+        card.classList.add('enabled');
+        if (actions) actions.classList.add('enabled');
+        card.style.pointerEvents = 'auto';
+      }, 150); // matches the .6s CSS transition duration
+    }
+
+
     function updateTouchAction() {
-  const preCanvas = document.getElementById('preCanvas');
-  const waveCanvas = document.getElementById('waveCanvas');
+      const preCanvas = document.getElementById('preCanvas');
+      const waveCanvas = document.getElementById('waveCanvas');
 
-  if (sampleBuffer) {
-    preCanvas.style.touchAction = 'none';
-    waveCanvas.style.touchAction = 'none';
-  } else {
-    preCanvas.style.touchAction = 'auto';
-    waveCanvas.style.touchAction = 'auto';
-  }
-}
+      if (sampleBuffer) {
+        preCanvas.style.touchAction = 'none';
+        waveCanvas.style.touchAction = 'none';
+      } else {
+        preCanvas.style.touchAction = 'auto';
+        waveCanvas.style.touchAction = 'auto';
+      }
+    }
 
-function humanizeScratchCurve(curve) {
-  const len = curve.length;
-  if (len < 2) return curve;
+    function humanizeScratchCurve(curve) {
+      const len = curve.length;
+      if (len < 2) return curve;
 
-  const warped = new Float32Array(len);
+      const warped = new Float32Array(len);
 
-  // === PARAMETERS ===
-  const ampDepth = 0.02 + Math.random() * 0.015;   // amplitude variation
-  const ampFreq = 1 + Math.random();               // amplitude speed
-  const ampPhase = Math.random() * Math.PI * 2;
+      // === PARAMETERS ===
+      const ampDepth = 0.02 + Math.random() * 0.015;   // amplitude variation
+      const ampFreq = 1 + Math.random();               // amplitude speed
+      const ampPhase = Math.random() * Math.PI * 2;
 
-  const timeWarpDepth = 0.015;                     // timing variation
-  const timeWarpFreq = 0.3 + Math.random() * 0.6;   // slower, 0.3–0.9 Hz
-  const timeWarpPhase = Math.random() * Math.PI * 2;
+      const timeWarpDepth = 0.015;                     // timing variation
+      const timeWarpFreq = 0.3 + Math.random() * 0.6;   // slower, 0.3–0.9 Hz
+      const timeWarpPhase = Math.random() * Math.PI * 2;
 
-  // Precompute warped time base
-  const warpedT = new Float32Array(len);
-  for (let i = 0; i < len; i++) {
-    const t = i / (len - 1);
-    warpedT[i] = t + timeWarpDepth * Math.sin(2 * Math.PI * timeWarpFreq * t + timeWarpPhase);
-  }
+      // Precompute warped time base
+      const warpedT = new Float32Array(len);
+      for (let i = 0; i < len; i++) {
+        const t = i / (len - 1);
+        warpedT[i] = t + timeWarpDepth * Math.sin(2 * Math.PI * timeWarpFreq * t + timeWarpPhase);
+      }
 
-  // Normalize time base (so it still starts at 0 and ends at 1)
-  const minT = warpedT[0];
-  const maxT = warpedT[len - 1];
-  for (let i = 0; i < len; i++) {
-    warpedT[i] = (warpedT[i] - minT) / (maxT - minT);
-  }
+      // Normalize time base (so it still starts at 0 and ends at 1)
+      const minT = warpedT[0];
+      const maxT = warpedT[len - 1];
+      for (let i = 0; i < len; i++) {
+        warpedT[i] = (warpedT[i] - minT) / (maxT - minT);
+      }
 
-  // Resample original curve onto warped time base
-  for (let i = 0; i < len; i++) {
-    const t = warpedT[i];
-    const idx = t * (len - 1);
-    const i0 = Math.floor(idx);
-    const i1 = Math.min(len - 1, i0 + 1);
-    const frac = idx - i0;
-    const base = curve[i0] + (curve[i1] - curve[i0]) * frac;
+      // Resample original curve onto warped time base
+      for (let i = 0; i < len; i++) {
+        const t = warpedT[i];
+        const idx = t * (len - 1);
+        const i0 = Math.floor(idx);
+        const i1 = Math.min(len - 1, i0 + 1);
+        const frac = idx - i0;
+        const base = curve[i0] + (curve[i1] - curve[i0]) * frac;
 
-    // Apply gentle amplitude modulation
-    const ampFactor = 1 + ampDepth * Math.sin(2 * Math.PI * ampFreq * t + ampPhase);
-    warped[i] = base * ampFactor;
-  }
+        // Apply gentle amplitude modulation
+        const ampFactor = 1 + ampDepth * Math.sin(2 * Math.PI * ampFreq * t + ampPhase);
+        warped[i] = base * ampFactor;
+      }
 
-  // Ensure first and last values are preserved exactly
-  warped[0] = curve[0];
-  warped[len - 1] = curve[len - 1];
+      // Ensure first and last values are preserved exactly
+      warped[0] = curve[0];
+      warped[len - 1] = curve[len - 1];
 
-  return warped;
-}
+      return warped;
+    }
 
 
     // Elke 2 seconden een bubble maken
