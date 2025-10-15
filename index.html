@@ -1009,6 +1009,12 @@
       }
     }
 
+    @media (max-width: 600px) {
+      #prePanel.panel .section-title {
+        display: block;
+      }
+    }
+
     footer {
       text-align: center;
       font-size: 14px;
@@ -1316,7 +1322,9 @@
 
       const preLen = Math.max(0, (preEnd - preStart));
       const lenStr = preLen.toFixed(2) + 's';
-      preLenLbl.textContent = (Math.abs(preLen - 10) < 0.005) ? `${lenStr} (Max)` : lenStr;
+      preLenLbl.innerHTML = (Math.abs(preLen - 10) < 0.005)
+        ? `${lenStr} (<span style="color:#22c55e;">Max</span>)`
+        : lenStr;
     }
 
     // ==== drawing
@@ -2135,33 +2143,45 @@
       // === Stap 3: Slip Mode continuation ===
       if (slipModeEl.checked) {
         const sr = scratchInput.sampleRate;
-
-        // Calculate lengths
         const scratchLen = out.length;
         const normalStart = Math.floor(clipStart * sr);
         const normalEnd = Math.floor(sampleBuffer.duration * sr);
         const normalLen = normalEnd - normalStart;
 
-        // Make new buffer big enough for scratch + normal continuation
         const extended = new AudioBuffer({
           length: scratchLen + normalLen,
           numberOfChannels: out.numberOfChannels,
           sampleRate: sr
         });
 
-        // Copy scratch effect
+        // Copy scratch part
         for (let c = 0; c < out.numberOfChannels; c++) {
           extended.getChannelData(c).set(out.getChannelData(c), 0);
         }
 
-        // Append clean playback from clipStart → preEnd
+        // Append continuation (Slip Mode tail)
         for (let c = 0; c < out.numberOfChannels; c++) {
           const inData = scratchInput.getChannelData(c);
           const extData = extended.getChannelData(c);
 
           for (let i = 0; i < normalLen; i++) {
             const srcIdx = normalStart + i;
-            extData[scratchLen + i] = inData[srcIdx] || 0;
+            const targetIdx = scratchLen + i;
+            extData[targetIdx] = inData[srcIdx] || 0;
+          }
+
+          const fadeInSamples = Math.floor(sr * 0.01); // ≈10 ms
+          for (let i = 0; i < fadeInSamples && i < normalLen; i++) {
+            const t = i / fadeInSamples;
+            const idx = scratchLen + i;
+            extData[idx] *= t;
+          }
+
+          const fadeOutSamples = Math.floor(sr * 0.02); // ≈20 ms
+          const endStart = extended.length - fadeOutSamples;
+          for (let i = 0; i < fadeOutSamples && endStart + i < extended.length; i++) {
+            const t = 1 - i / fadeOutSamples;
+            extData[endStart + i] *= t;
           }
         }
 
