@@ -2649,27 +2649,32 @@
     }
 
     async function handleDownloadPreset(i) {
-      try {
-        const rendered = await renderEffectToBuffer(presets[i]);
-        const wav = audioBufferToWav(rendered);
-        const url = URL.createObjectURL(wav);
-        const a = document.createElement('a');
-        a.href = url;
+  try {
+    const rendered = await renderEffectToBuffer(presets[i]);
+    const wav = audioBufferToWav(rendered);
+    const url = URL.createObjectURL(wav);
+    const a = document.createElement('a');
+    a.href = url;
 
-        // 🔹 Get BPM value and sanitize name
-        const bpm = parseFloat(bpmEl.value || '120');
-        const bpmStr = isFinite(bpm) ? `${Math.round(bpm)}bpm` : 'bpm';
-        const presetName = presets[i].name.replace(/[^a-z0-9_-]+/ig, '_');
+    const bpm = parseFloat(bpmEl.value || '120');
+    const bpmStr = isFinite(bpm) ? `${Math.round(bpm)}bpm` : 'bpm';
+    const presetName = presets[i].name?.replace(/[^a-z0-9_-]+/ig, '_') || 'Preset';
+    const optionName = presets[i].selectedOption
+      ? presets[i].selectedOption.replace(/[^a-z0-9_-]+/ig, '_')
+      : '';
 
-        // 🔹 Include BPM in filename
-        a.download = `${presetName}_${bpmStr}.wav`;
+    let fileName = presetName;
+    if (optionName) fileName += `_${optionName}`;
+    fileName += `_${bpmStr}.wav`;
 
-        a.click();
-        globalStatus.textContent = `${presets[i].name} downloaded at ${bpmStr}`;
-      } catch (err) {
-        globalStatus.textContent = err.message;
-      }
-    }
+    a.download = fileName;
+    a.click();
+
+    globalStatus.textContent = `${presets[i].name}${optionName ? ` (${optionName})` : ''} downloaded at ${bpmStr}`;
+  } catch (err) {
+    globalStatus.textContent = err.message;
+  }
+}
 
     function audioBufferToWav(buffer) { const numCh = buffer.numberOfChannels; const sampleRate = buffer.sampleRate; const length = buffer.length; const bps = 2; const blockAlign = numCh * bps; const byteRate = sampleRate * blockAlign; const dataSize = length * blockAlign; const total = 44 + dataSize; const ab = new ArrayBuffer(total); const dv = new DataView(ab); let p = 0; function w8(v) { dv.setUint8(p++, v); } function w16(v) { dv.setUint16(p, v, true); p += 2; } function w32(v) { dv.setUint32(p, v, true); p += 4; } w8(0x52); w8(0x49); w8(0x46); w8(0x46); w32(36 + dataSize); w8(0x57); w8(0x41); w8(0x56); w8(0x45); w8(0x66); w8(0x6d); w8(0x74); w8(0x20); w32(16); w16(1); w16(numCh); w32(sampleRate); w32(byteRate); w16(blockAlign); w16(16); w8(0x64); w8(0x61); w8(0x74); w8(0x61); w32(dataSize); const chans = []; for (let ch = 0; ch < numCh; ch++) chans.push(buffer.getChannelData(ch)); for (let i = 0; i < length; i++) { for (let ch = 0; ch < numCh; ch++) { let s = Math.max(-1, Math.min(1, chans[ch][i])); s = s < 0 ? s * 0x8000 : s * 0x7fff; dv.setInt16(p, s, true); p += 2; } } return new Blob([ab], { type: 'audio/wav' }); }
 
