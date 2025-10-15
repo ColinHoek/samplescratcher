@@ -1185,6 +1185,7 @@
     const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 
     let mediaRecorder, chunks = [];
+    let mediaStream = null;
     let sampleBuffer = null;
     let originalSampleBuffer = null;
     let sampleFileName = '';
@@ -1555,7 +1556,7 @@
 
       // === enforce 10-second rule ===
       if (sampleBuffer.duration > 10) {
-        recStatus.innerHTML = 'Please cut a sample from the audio file! (<span style="color:#22c55e;">Max 10s</span>)';
+        recStatus.innerHTML = 'Please cut a sample from the file! (<span style="color:#22c55e;">Max 10s</span>)';
         disableScratchArea(true);        // hide / disable scratch canvas
         commitPreBtn.disabled = false;
         reloadSampleBtn.disabled = false;
@@ -1627,20 +1628,28 @@
 
     const startRecording = async () => {
       await audioCtx.resume();
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      mediaRecorder = new MediaRecorder(stream);
+
+      if (!mediaStream || !mediaStream.active) {
+        mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      }
+
+      mediaRecorder = new MediaRecorder(mediaStream);
       chunks = [];
+
       mediaRecorder.ondataavailable = e => e.data && chunks.push(e.data);
-      mediaRecorder.onstop = async () => { const blob = new Blob(chunks, { type: chunks[0]?.type || 'audio/webm' }); const arr = await blob.arrayBuffer(); await loadArrayBuffer(arr, 'Recorded Sample'); };
+      mediaRecorder.onstop = async () => {
+        const blob = new Blob(chunks, { type: chunks[0]?.type || 'audio/webm' });
+        const arr = await blob.arrayBuffer();
+        await loadArrayBuffer(arr, 'Recorded Sample');
+      };
+
       mediaRecorder.start();
       recordBtn.disabled = true;
       stopBtn.disabled = false;
 
-      // Zet state class
       recControls.classList.remove('idle');
       recControls.classList.add('recording');
 
-      // Start timer
       recStartTime = Date.now();
       if (recTimerInterval) clearInterval(recTimerInterval);
       recTimerInterval = setInterval(() => {
@@ -1650,13 +1659,24 @@
     };
     recordBtn.onclick = startRecording;
     stopBtn.onclick = () => {
-      if (mediaRecorder && mediaRecorder.state !== 'inactive') mediaRecorder.stop(); stopBtn.disabled = true; recordBtn.disabled = false; // Reset state
+      if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+        mediaRecorder.stop();
+      }
+
+      if (mediaStream) {
+        mediaStream.getTracks().forEach(t => t.stop());
+        mediaStream = null;
+      }
+
+      stopBtn.disabled = true;
+      recordBtn.disabled = false;
+
       recControls.classList.remove('recording');
       recControls.classList.add('idle');
 
-      // Stop timer
       if (recTimerInterval) clearInterval(recTimerInterval);
       recTimerInterval = null;
+
       recStatus.textContent = 'Stopped. Processing sample…';
     };
 
@@ -1844,29 +1864,30 @@
 
         const msg = 'Cut a sample from the audio file. (Max 10s)';
 
-// Device pixel ratio for sharpness
-const dpr = window.devicePixelRatio || 1;
+        // Device pixel ratio for sharpness
+        const dpr = window.devicePixelRatio || 1;
 
-// Balanced font scaling: ~12px mobile, ~16px desktop
-const baseFont = window.innerWidth < 600 ? 12 : 16;
-waveCtx.font = `${baseFont * dpr}px system-ui`;
-waveCtx.fillStyle = '#777';
+        // Balanced font scaling: ~12px mobile, ~16px desktop
+        const baseFont = window.innerWidth < 600 ? 12 : 16;
+        waveCtx.font = `${baseFont * dpr}px system-ui`;
+        waveCtx.fillStyle = '#777';
 
-// Optional shadow for readability
-waveCtx.shadowColor = 'rgba(0,0,0,0.3)';
-waveCtx.shadowBlur = 2;
+        // Optional shadow for readability
+        waveCtx.shadowColor = 'rgba(0,0,0,0.3)';
+        waveCtx.shadowBlur = 2;
 
-// Center text on canvas
-const metrics = waveCtx.measureText(msg);
-const x = (waveCanvas.width - metrics.width) / 2;
-const y = (waveCanvas.height / 2) + baseFont * dpr * 0.4;
-waveCtx.fillText(msg, x, y);
+        // Center text on canvas
+        const metrics = waveCtx.measureText(msg);
+        const x = (waveCanvas.width - metrics.width) / 2;
+        const y = (waveCanvas.height / 2) + baseFont * dpr * 0.4;
+        waveCtx.fillText(msg, x, y);
 
         generateBtn.disabled = true;
       } else {
         // Short files can be used directly
         recStatus.textContent = `Sample ready (${sampleBuffer.duration.toFixed(2)}s @ ${sampleBuffer.sampleRate}Hz)`;
         disableScratchArea(false);
+        drawMainWave();
         generateBtn.disabled = false;
       }
 
@@ -2099,14 +2120,13 @@ waveCtx.fillText(msg, x, y);
       }
 
       // === Stap 3: Slip Mode continuation ===
-      // === Step 3: Slip Mode continuation (play scratch, then from start of scratch to end of preselection) ===
       if (slipModeEl.checked) {
         const sr = scratchInput.sampleRate;
 
         // Calculate lengths
         const scratchLen = out.length;
         const normalStart = Math.floor(clipStart * sr);
-        const normalEnd = Math.floor(preEnd * sr);
+        const normalEnd = Math.floor(sampleBuffer.duration * sr);
         const normalLen = normalEnd - normalStart;
 
         // Make new buffer big enough for scratch + normal continuation
