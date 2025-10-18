@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 
-<head>
+<headli>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <link rel="icon" href="favicon.ico" type="image/x-icon">
@@ -9,1035 +9,12 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;600;700&display=swap" rel="stylesheet">
-  <style>
-    :root {
-      --bg: #0e0e0e;
-      --panel: #1e211f5c;
-      --panel-elev: #222523;
-      --line: #2a2a2a;
-      --text: #f1f1f1;
-      --muted: #a7a7a7;
-      --muted-2: #8b8b8b;
-      --accent: #1a9d4a;
-      --accent-hover: #22c55e;
-      --green: #22c55e;
-      --danger: #ef4444;
-      --white: #ffffff;
-      --shadow: 0 10px 30px rgba(0, 0, 0, .3);
-    }
-
-    * {
-      box-sizing: border-box;
-    }
-
-    html,
-    body {
-      height: 100%;
-      margin: 0;
-      overscroll-behavior: none;
-      touch-action: manipulation;
-    }
-
-    body {
-      font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
-      color: var(--text);
-      background: linear-gradient(to bottom, #181C1A 0%, #0D0D0D 100%);
-      background-attachment: fixed;
-      background-repeat: no-repeat;
-      background-size: 100% 100%;
-    }
-
-    header {
-      padding: 18px 22px;
-      border-bottom: 1px solid var(--line);
-      background: #0b0b0b;
-    }
-
-    header h1 {
-      margin: 0;
-      font-size: 28px;
-      letter-spacing: .5px;
-      font-family: Oswald, sans-serif;
-      font-weight: 700;
-    }
-
-    main {
-      max-width: 1100px;
-      margin: 0 auto;
-      padding-right: 20px;
-      padding-bottom: 20px;
-      padding-left: 20px;
-      display: grid;
-      gap: 14px;
-    }
-
-    .panel {
-      background: var(--panel);
-      border: 1px solid var(--line);
-      border-radius: 14px;
-      padding: 14px;
-      overflow: hidden;
-      z-index: 2
-    }
-
-    .panel.elev {
-      background: var(--panel-elev);
-      box-shadow: var(--shadow);
-      border-color: #222523;
-      z-index: 3
-    }
-
-    .section-title {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 10px;
-    }
-
-    .section-title .left-group {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      /* spacing between name, pill, and reload */
-    }
-
-    .section-title h2 {
-      margin: 10px;
-      font-size: 22px;
-      font-family: Oswald, sans-serif;
-      font-weight: 600;
-      letter-spacing: .3px;
-    }
-
-    .section-sub {
-      margin: -6px 0 8px;
-      color: var(--muted-2);
-      font-size: 14px;
-    }
-
-    .dropzone {
-      position: relative;
-      display: grid;
-      place-items: center;
-      min-height: 260px;
-      border: 2px dashed var(--line);
-      border-radius: 18px;
-      background: #121212;
-      cursor: pointer;
-      transition: transform .18s ease, border-color .2s ease, background .2s ease, box-shadow .2s ease;
-    }
-
-    .dropzone:hover {
-      border-color: var(--accent-hover);
-      transform: translateY(-1px);
-      box-shadow: 0 10px 24px rgba(0, 0, 0, .25);
-    }
-
-    .dropzone.hover {
-      border-color: var(--accent);
-      background: #0f1511;
-    }
-
-    .dz-inner {
-      text-align: center;
-      line-height: 1.6;
-    }
-
-    .big-plus {
-      font-size: 60px;
-      font-weight: 700;
-      font-family: Oswald, sans-serif;
-      display: block;
-    }
-
-    .dz-title {
-      font-size: 18px;
-      font-weight: 600;
-    }
-
-    .dz-browse {
-      font-size: 16px;
-      font-weight: 600;
-      color: var(--accent);
-      text-decoration: underline;
-    }
-
-    .dz-browse:hover {
-      color: var(--accent-hover);
-    }
-
-    input[type="file"] {
-      display: none;
-    }
-
-    .row {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
-      align-items: center;
-    }
-
-    button,
-    input,
-    select {
-      font-size: 16px;
-      padding: 10px 14px;
-      border-radius: 999px;
-      border: 1px solid var(--line);
-      background: #101010;
-      color: var(--text);
-      transition: transform .12s ease, background .18s ease, box-shadow .18s ease, border-color .18s ease;
-    }
-
-    button {
-      cursor: pointer;
-    }
-
-    .no-hover:hover {
-      transform: translateY(0px);
-    }
-
-    button:hover {
-      transform: translateY(-1px);
-    }
-
-    .primary {
-      background: var(--accent);
-      color: #000;
-      border-color: transparent;
-    }
-
-    .primary:hover {
-      background: var(--accent-hover);
-    }
-
-    .ghost {
-      background: #141414;
-    }
-
-    .round-icon {
-      width: 64px;
-      height: 64px;
-      border-radius: 999px;
-      display: grid;
-      place-items: center;
-      border: 1px solid var(--line);
-      background: linear-gradient(#121212, #0e0e0e);
-      margin: 10px;
-      box-shadow: 0 8px 20px rgba(0, 0, 0, .25), inset 0 1px 0 rgba(255, 255, 255, .05);
-    }
-
-    .round-icon:active {
-      transform: scale(.96);
-    }
-
-    .record-dot {
-      width: 18px;
-      height: 18px;
-      border-radius: 50%;
-      background: var(--danger);
-      box-shadow: 0 0 0 6px rgba(239, 68, 68, .12);
-    }
-
-    .stop-square {
-      width: 18px;
-      height: 18px;
-      background: var(--white);
-      box-shadow: 0 0 0 6px rgba(255, 255, 255, .1);
-    }
-
-    .rec-controls-wrap {
-      display: grid;
-      place-items: center;
-      padding: 10px 0 2px;
-    }
-
-    .rec-controls {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 16px;
-      background: #101010;
-      border: 1px solid #242424;
-      border-radius: 999px;
-      padding: 8px 14px;
-      box-shadow: var(--shadow);
-    }
-
-    .rec-status {
-      text-align: center;
-      color: var(--muted);
-      margin-top: 6px;
-      min-height: 18px;
-    }
-
-    /* Bubbles overlay website */
-    .screen-overlay-container {
-      position: fixed;
-      width: 100vw;
-      height: 100vh;
-      top: 0;
-      left: 0;
-      pointer-events: none;
-      overflow: hidden;
-      z-index: 1;
-    }
-
-    .bubble {
-      position: absolute;
-      bottom: -100px;
-      background: rgba(255, 255, 255, 0.05);
-      border-radius: 50%;
-      animation: rise linear forwards;
-    }
-
-    @keyframes rise {
-      to {
-        transform: translateY(-110vh);
-        opacity: 0;
-      }
-    }
-
-    canvas {
-      width: 100%;
-      background: #121212;
-      border: 1px solid var(--line);
-      border-radius: 10px;
-      height: 160px;
-      touch-action: auto;
-    }
-
-    /* Preselection – smaller, subtle */
-    #preCanvas {
-      height: 80px;
-      background: #121212;
-      cursor: crosshair;
-    }
-
-    .handles {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 8px;
-      color: var(--muted);
-      font-size: 13px;
-      margin-top: 6px;
-    }
-
-    .handles .center {
-      text-align: center;
-      color: var(--muted);
-      /* keep label dim */
-    }
-
-    .handles .center .value {
-      color: #d7d7d7;
-      /* pop just the number */
-      font-weight: 600;
-    }
-
-    .tiny {
-      font-size: 13px;
-      padding: 6px 10px;
-    }
-
-    .pill {
-      border-radius: 999px;
-      padding: 8px 12px;
-    }
-
-    /* Settings controls */
-    .settings-row {
-      display: flex;
-      flex-wrap: wrap;
-      align-items: center;
-      column-gap: 20px;
-      gap: 14px;
-    }
-
-    .field label {
-      font-size: 13px;
-      color: var(--muted);
-      display: inline-block;
-    }
-
-    /* Green themed slider */
-    input[type=range] {
-      -webkit-appearance: none;
-      appearance: none;
-      width: 280px;
-      height: 6px;
-      border-radius: 999px;
-      background: #2a2a2a;
-      outline: none;
-    }
-
-    input[type=range]::-webkit-slider-thumb {
-      -webkit-appearance: none;
-      appearance: none;
-      width: 18px;
-      height: 18px;
-      border-radius: 50%;
-      background: var(--accent);
-      border: 2px solid #0e0e0e;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, .35);
-      transition: transform .12s ease, background .18s ease;
-    }
-
-    input[type=range]::-webkit-slider-thumb:hover {
-      background: var(--accent-hover);
-      transform: scale(1.06);
-    }
-
-    input[type=range]::-moz-range-thumb {
-      width: 18px;
-      height: 18px;
-      border-radius: 50%;
-      background: var(--accent);
-      border: none;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, .35);
-    }
-
-    input[type=range]::-moz-range-track {
-      background: #2a2a2a;
-      height: 6px;
-      border-radius: 999px;
-    }
-
-    .status {
-      min-height: 20px;
-      color: var(--muted);
-    }
-
-    /* Effects grid */
-    .preset-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-      gap: 14px;
-      justify-content: center;
-      /* center last card if only one */
-    }
-
-    .preset-card {
-      background: #2225234A;
-      /* semi-transparent initial background */
-      border: 1px solid #2a2a2a;
-      border-radius: 16px;
-      padding: 14px;
-      display: grid;
-      gap: 14px;
-      box-shadow: var(--shadow);
-      transition: background 0.6s ease, opacity 0.6s ease;
-    }
-
-    .preset-card.enabled {
-      background: #222523a1;
-      /* solid background after fade-in */
-    }
-
-    .preset-card h3 {
-      margin: 0;
-      font-size: 20px;
-      font-family: Oswald, sans-serif;
-    }
-
-    .mini-wrap {
-      border-radius: 10px;
-      overflow: hidden;
-      background: #121212;
-    }
-
-    .mini-wave {
-      width: 100%;
-      height: 60px;
-      background: #121212;
-      display: block;
-    }
-
-    .mini-wrap canvas.mini-wave {
-      touch-action: auto !important;
-    }
-
-    .curve-vis {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 10px;
-    }
-
-    .curve {
-      position: relative;
-      border: 1px solid #2a2a2a;
-      border-radius: 10px;
-      background: #121212;
-      padding: 8px;
-    }
-
-    .curve h4 {
-      position: absolute;
-      top: 6px;
-      left: 10px;
-      margin: 0;
-      font-size: 12px;
-      color: rgba(255, 255, 255, .5);
-      font-weight: 600;
-    }
-
-    .curve canvas {
-      width: 100%;
-      height: 100px;
-      border: none;
-      background: transparent;
-    }
-
-    .preset-actions {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 10px;
-    }
-
-    .preset-actions .primary,
-    .preset-actions .btn-ghost {
-      width: 100%;
-    }
-
-    .preset-card .pname,
-    .preset-card .meta b,
-    .preset-card .duration {
-      display: flex;
-      align-items: center;
-      opacity: 0.4;
-      color: var(--muted);
-      transition: color 0.6s ease, opacity 0.6s ease;
-    }
-
-    .preset-card.enabled .pname,
-    .preset-card.enabled .meta b,
-    .preset-card.enabled .duration {
-      opacity: 1;
-      color: #fff;
-    }
-
-    .beat-icon {
-      display: flex;
-      align-items: center;
-      pointer-events: none;
-    }
-
-    .beat-icon img.beat-svg {
-      width: 30px;
-      opacity: 0.2;
-      transition: opacity 0.6s ease;
-    }
-
-    .beat-options {
-      position: absolute;
-      top: -9999px;
-      left: -9999px;
-      opacity: 0;
-      transform: scale(0.8);
-      transition: opacity 0.2s, transform 0.2s;
-    }
-
-    .option-menu,
-    .beat-options {
-      position: fixed;
-      top: -9999px;
-      left: -9999px;
-      opacity: 0;
-      pointer-events: none;
-      transform: scale(0.8);
-    }
-
-    .option-menu.show,
-    .beat-options.show {
-      opacity: 1;
-      pointer-events: auto;
-      transform: scale(1);
-      top: auto;
-      left: auto;
-    }
-
-    .beat-popup {
-      display: none;
-      position: absolute;
-      bottom: 40px;
-      left: 0;
-      right: 0;
-      background: #111;
-      border: 1px solid #2a2a2a;
-      border-radius: 999px;
-      padding: 6px 10px;
-      display: flex;
-      justify-content: center;
-      gap: 8px;
-      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
-      animation: fadeInUp .25s ease forwards;
-      z-index: 5;
-    }
-
-    .beat-popup button {
-      background: #222;
-      border: 1px solid #444;
-      border-radius: 999px;
-      padding: 6px 10px;
-      font-size: 13px;
-      color: #fff;
-      cursor: pointer;
-    }
-
-    .beat-popup button:hover {
-      background: var(--accent);
-      color: #000;
-    }
-
-    @keyframes fadeInUp {
-      from {
-        opacity: 0;
-        transform: translateY(10px);
-      }
-
-      to {
-        opacity: 1;
-        transform: translateY(0);
-      }
-    }
-
-    .preset-card.enabled .beat-icon img.beat-svg {
-      opacity: 1;
-    }
-
-    .preset-card.enabled .beat-icon {
-      pointer-events: auto;
-    }
-
-    .preset-card .beat-count {
-      font-weight: 700;
-      font-size: 13px;
-      letter-spacing: 0.5px;
-      opacity: 0.4;
-      color: #4d4d4d;
-      transition: color 0.6s ease, opacity 0.6s ease;
-    }
-
-    .preset-card.enabled .beat-count {
-      opacity: 0.8;
-      color: #8b8b8b;
-    }
-
-    .preset-card .meta {
-      opacity: 0.4;
-      color: #4d4d4d;
-      transition: color 0.6s ease, opacity 0.6s ease;
-    }
-
-    .preset-card.enabled .meta {
-      opacity: 1;
-      color: #8b8b8b;
-    }
-
-    .preset-card canvas {
-      opacity: 0;
-      transition: opacity 0.6s ease;
-    }
-
-    .playBtn.playing {
-      background: rgb(16, 102, 47);
-      /* donkerder groen */
-      border-color: transparent;
-    }
-
-    .preset-card.enabled canvas {
-      opacity: 1;
-    }
-
-    .btn-ghost {
-      background: #141414;
-      border: 1px solid #2a2a2a;
-      color: var(--text);
-    }
-
-    .meta {
-      display: flex;
-      align-items: center;
-      gap: 5px;
-      color: #6f6f6f;
-      font-size: 13px;
-    }
-
-    .meta b {
-      color: #cfcfcf;
-      font-weight: 700;
-    }
-
-    /* Pulse animatie voor record */
-    @keyframes pulse {
-      0% {
-        box-shadow: 0 0 0 6px rgba(239, 68, 68, .3);
-      }
-
-      50% {
-        box-shadow: 0 0 0 12px rgba(239, 68, 68, .6);
-      }
-
-      100% {
-        box-shadow: 0 0 0 6px rgba(239, 68, 68, .3);
-      }
-    }
-
-    /* State classes */
-    .recording .record-dot {
-      background: var(--danger);
-      animation: pulse 1.2s infinite;
-    }
-
-    .recording .stop-square {
-      background: var(--white);
-      opacity: 1;
-    }
-
-    .idle .stop-square {
-      background: var(--white);
-      opacity: 0.3;
-    }
-
-    .idle .record-dot {
-      background: var(--danger);
-      animation: none;
-    }
-
-    .round-icon.small {
-      width: 44px;
-      height: 44px;
-      margin: 4px;
-    }
-
-    /* Icon wrappers centreren */
-    .round-icon.small .icon {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-
-    /* Play driehoekje */
-    .icon-play {
-      width: 0;
-      height: 0;
-      border-top: 8px solid transparent;
-      border-bottom: 8px solid transparent;
-      border-left: 14px solid var(--white);
-    }
-
-    .icon-stop {
-      width: 14px;
-      height: 14px;
-      background: var(--white);
-    }
-
-    /* Pause icon */
-    .icon-pause {
-      display: flex;
-      gap: 4px;
-    }
-
-    .icon-pause span {
-      display: block;
-      width: 4px;
-      height: 14px;
-      background: var(--white);
-    }
-
-    .preset-actions button {
-      opacity: 0.4;
-      cursor: not-allowed;
-      pointer-events: none;
-      transition: opacity 0.3s ease;
-    }
-
-    /* Enabled state after generate */
-    .preset-actions.enabled button {
-      opacity: 1;
-      cursor: pointer;
-      pointer-events: auto;
-    }
-
-    button:disabled {
-      opacity: 0.4;
-      cursor: not-allowed;
-      pointer-events: none;
-    }
-
-
-    /* === Slip Mode Switch === */
-    .switch-field {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-    }
-
-    .switch-label {
-      height: 40px;
-      font-size: 16px;
-      font-family: Oswald, sans-serif;
-      letter-spacing: .3px;
-    }
-
-    /* Switch styling */
-    .switch {
-      height: 40px;
-      position: relative;
-      display: inline-block;
-      width: 50px;
-      height: 28px;
-    }
-
-    .switch input {
-      opacity: 0;
-      width: 0;
-      height: 0;
-    }
-
-    .slider {
-      position: absolute;
-      cursor: pointer;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background-color: #333;
-      transition: .3s;
-      border-radius: 999px;
-    }
-
-    .slider:before {
-      position: absolute;
-      content: "";
-      height: 20px;
-      width: 20px;
-      left: 4px;
-      bottom: 4px;
-      background-color: white;
-      border-radius: 50%;
-      transition: .3s;
-    }
-
-    /* Active state */
-    .switch input:checked+.slider {
-      background-color: var(--accent);
-    }
-
-    .switch input:checked+.slider:before {
-      transform: translateX(22px);
-    }
-
-    /* Settings panel (no shadow, flat bottom) */
-    #settingsPanel {
-      margin-bottom: -15px;
-      /* overlap into Effects */
-      border-bottom-left-radius: 0;
-      border-bottom-right-radius: 0;
-      box-shadow: none;
-      /* remove its own shadow */
-      position: relative;
-      z-index: 2;
-      /* ensure it’s above the page bg */
-    }
-
-    /* Effects panel (has shadow, flat top, casts shadow over Settings) */
-    #effectsPanel {
-      margin-top: 0;
-      border-top-left-radius: 0;
-      border-top-right-radius: 0;
-      box-shadow: var(--shadow);
-      /* keep the drop shadow */
-      position: relative;
-      z-index: 2;
-      /* sits above Settings, casts shadow */
-    }
-
-
-    /* Load Panel */
-    #loadPanel {
-      margin-bottom: -15px;
-      /* pull it closer to Pre panel */
-      border-bottom-left-radius: 0;
-      /* flatten bottom corners */
-      border-bottom-right-radius: 0;
-      position: relative;
-      z-index: 2;
-      /* keep it above Pre panel */
-    }
-
-    /* Preselection Panel */
-    #prePanel {
-      margin-top: 0;
-      border-top-left-radius: 0;
-      /* flatten top corners */
-      border-top-right-radius: 0;
-    }
-
-    .logo-container {
-      text-align: center;
-      /* Logo horizontaal centreren */
-      padding-top: 30px;
-      padding-bottom: 25px;
-      /* Boven- en onderruimte, pas aan naar wens */
-    }
-
-    .logo-container svg {
-      width: 80px;
-      /* Startwaarde voor grootte (pas aan) */
-      height: auto;
-      /* Aspect ratio behouden */
-    }
-
-    .ss-logo {
-      width: 200px;
-    }
-
-    /* --- Option pill --- */
-    .option-pill {
-      background: transparent;
-      color: #a7a7a7;
-      border: 1px solid #a7a7a7;
-      border-radius: 999px;
-      font-size: 0.8rem;
-      padding: 4px 10px;
-      margin-right: auto;
-      cursor: pointer;
-      pointer-events: none;
-      opacity: 0.4;
-      transition: opacity 0.4s ease;
-    }
-
-    .option-pill.hidden {
-      display: none;
-    }
-
-    /* --- Dropdown menu voor de opties --- */
-    .option-menu {
-      position: absolute;
-      display: flex;
-      flex-direction: column;
-      background: rgba(20, 20, 20, 0.95);
-      border: 1px solid #333;
-      border-radius: 20px;
-      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.5);
-      padding: 6px;
-      z-index: 9999;
-      opacity: 0;
-      transform: scale(0.95);
-      pointer-events: none;
-      transition: opacity 0.2s, transform 0.2s;
-    }
-
-    .option-menu.show {
-      opacity: 1;
-      transform: scale(1);
-      pointer-events: auto;
-    }
-
-    .option-menu button {
-      background: transparent;
-      border: 1px solid transparent;
-      color: #fff;
-      font-size: 0.85rem;
-      padding: 6px 12px;
-      text-align: left;
-      cursor: pointer;
-      border-radius: 999px;
-      transition: border-color 0.2s, background 0.2s;
-    }
-
-    .preset-card.enabled .option-pill {
-      color: #ffffff;
-      border: 1px solid #ffffff;
-      pointer-events: auto;
-      opacity: 1;
-    }
-
-    .option-menu button:hover {
-      border-color: rgba(255, 255, 255, 0.3);
-    }
-
-    .option-menu button.selected {
-      border-color: #fff;
-    }
-
-    .reload-btn {
-      background: transparent;
-      border: none;
-      padding: 0px;
-      cursor: pointer;
-      opacity: 0.05;
-      pointer-events: none;
-      transition: opacity 0.2s ease;
-    }
-
-    /* When the preset is enabled */
-    .preset-card.enabled .reload-btn {
-      opacity: 0.5;
-      pointer-events: auto;
-    }
-
-    .preset-card.enabled .reload-btn:hover {
-      opacity: 1;
-    }
-
-    .reload-btn svg {
-      width: 18px;
-      height: 18px;
-      display: block;
-      fill: #fff;
-    }
-
-    @media (max-width: 600px) {
-      .beat-options {
-        left: 200px !important;
-      }
-    }
-
-    @media (max-width: 600px) {
-      #generateBtn {
-        display: block;
-      }
-    }
-
-    @media (max-width: 600px) {
-      .section-title {
-        display: flex;
-        align-items: initial;
-      }
-    }
-
-    @media (max-width: 600px) {
-      #prePanel.panel .section-title {
-        display: block;
-      }
-    }
-
-    footer {
-      text-align: center;
-      font-size: 14px;
-      color: var(--muted);
-      padding: 30px 10px;
-      border-top: 1px solid var(--line);
-      margin-top: 40px;
-    }
-
-    footer a {
-      color: var(--muted);
-      /* same gray tone as the footer text */
-      text-decoration: none;
-      /* remove underline */
-    }
-
-    footer a:hover {
-      color: var(--accent);
-      /* green accent on hover */
-      text-decoration: underline;
-      /* optional: subtle underline */
-    }
-  </style>
+  <link rel="stylesheet" href="styles.css" />
+  <!-- Axios for API calls -->
+  <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+  <!-- Authentication & Download Manager -->
+  <script src="auth.js" defer></script>
+  <link rel="stylesheet" href="auth.css" />
 </head>
 
 <body>
@@ -1046,6 +23,17 @@
     <a href="https://carpaudio.com/" aria-label="CARP Audio home">
       <img src="icons/ss-logo.svg" alt="Sample Scratcher Logo" class="ss-logo" />
     </a>
+    <!-- User Menu -->
+    <div id="userMenu" class="user-menu">
+      <button id="loginBtn" class="pill primary">Login</button>
+      <div id="userInfo" class="user-info" style="display:none;">
+        <div class="user-details">
+          <div id="userName" class="user-name"></div>
+          <div id="downloadStatus" class="download-status"></div>
+        </div>
+        <button id="logoutBtn" class="pill ghost tiny">Logout</button>
+      </div>
+    </div>
   </div>
 
   <main>
@@ -1177,11 +165,92 @@
     <div class="bubble-container" id="bubbleContainer"></div>
   </div>
 
+  <!-- Auth Modal -->
+  <div id="authModal" class="modal">
+    <div class="modal-content">
+      <button class="modal-close">&times;</button>
+      <div class="modal-tabs">
+        <button id="loginTab" class="modal-tab active">Login</button>
+        <button id="registerTab" class="modal-tab">Register</button>
+      </div>
+
+      <!-- Login Form -->
+      <form id="loginForm" class="auth-form">
+        <h2>Welcome Back</h2>
+        <div class="form-group">
+          <label for="loginEmail">Email</label>
+          <input type="email" id="loginEmail" required />
+        </div>
+        <div class="form-group">
+          <label for="loginPassword">Password</label>
+          <input type="password" id="loginPassword" required />
+        </div>
+        <div id="loginError" class="error-message"></div>
+        <button type="submit" class="primary">Login</button>
+      </form>
+
+      <!-- Register Form -->
+      <form id="registerForm" class="auth-form" style="display:none;">
+        <h2>Create Account</h2>
+        <div class="form-group">
+          <label for="registerName">Name</label>
+          <input type="text" id="registerName" required />
+        </div>
+        <div class="form-group">
+          <label for="registerEmail">Email</label>
+          <input type="email" id="registerEmail" required />
+        </div>
+        <div class="form-group">
+          <label for="registerPassword">Password</label>
+          <input type="password" id="registerPassword" required minlength="8" />
+          <small>At least 8 characters</small>
+        </div>
+        <div id="registerError" class="error-message"></div>
+        <button type="submit" class="primary">Create Account</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Upgrade Modal -->
+  <div id="upgradeModal" class="modal">
+    <div class="modal-content">
+      <button class="modal-close">&times;</button>
+      <h2>Download Limit Reached</h2>
+      <p>You've used all 5 free downloads for today.</p>
+      <div class="upgrade-benefits">
+        <h3>Upgrade to Premium</h3>
+        <ul>
+          <li>✓ Unlimited downloads</li>
+          <li>✓ No daily limits</li>
+          <li>✓ One-time payment of €20</li>
+          <li>✓ Lifetime access</li>
+        </ul>
+      </div>
+      <a href="https://carpaudio.com/products/sample-scratcher-premium" target="_blank" class="primary" style="display:inline-block; padding:12px 40px; text-decoration:none;">
+        Upgrade Now
+      </a>
+      <p style="margin-top:20px; font-size:14px; color:#999;">
+        Your downloads will reset tomorrow at midnight UTC.
+      </p>
+    </div>
+  </div>
+
   <footer>
     © 2025. <a href="https://carpaudio.com/" title="">CARP Audio</a>. All rights reserved.
   </footer>
 
   <script>
+    // =========================
+    // API Configuration
+    // =========================
+    const API_URL = 'https://sample-scratcher-api.vercel.app'; // production API URL
+
+    axios.defaults.baseURL = API_URL;
+    axios.defaults.withCredentials = false; // We use JWT tokens, not cookies
+
+    // =========================
+    // Audio Context
+    // =========================
     const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 
     let mediaRecorder, chunks = [];
@@ -2683,6 +1752,19 @@
 
     async function handleDownloadPreset(i) {
       try {
+        // Check if user is authenticated
+        if (!AppState.isAuthenticated) {
+          showAuthModal('login');
+          return;
+        }
+
+        // Check download eligibility
+        const eligibility = await checkDownloadEligibility();
+        if (!eligibility.allowed) {
+          showUpgradeModal();
+          return;
+        }
+
         const rendered = await renderEffectToBuffer(presets[i]);
         const wav = audioBufferToWav(rendered);
         const url = URL.createObjectURL(wav);
@@ -2702,6 +1784,9 @@
 
         a.download = fileName;
         a.click();
+
+        // Track download after successful file generation
+        await trackDownload(fileName);
 
         globalStatus.textContent = `${presets[i].name}${optionName ? ` (${optionName})` : ''} downloaded at ${bpmStr}`;
       } catch (err) {
