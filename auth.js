@@ -214,7 +214,7 @@ function updateUI() {
 
     // Update download status
     if (AppState.hasLicense) {
-      downloadStatus.innerHTML = '<span class="premium-badge">Premium</span> Unlimited downloads';
+      downloadStatus.innerHTML = '<span class="premium-badge">Unlimited</span>';
     } else {
       const remaining = AppState.downloadsRemaining;
       const color = remaining === 0 ? '#ef4444' : remaining <= 2 ? '#f59e0b' : '#22c55e';

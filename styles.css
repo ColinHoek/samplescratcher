@@ -79,7 +79,6 @@ main {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 10px;
 }
 
 .section-title .left-group {
@@ -856,6 +855,33 @@ button:disabled {
   /* keep it above Pre panel */
 }
 
+.user-menu {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 1000; /* stays above other elements */
+}
+
+.user-info {
+  position: relative;
+  background: rgba(30, 33, 31, 0.9);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 10px 14px;
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(6px);
+}
+
+.user-name {
+  font-weight: 600;
+  color: var(--white);
+}
+
+.download-status {
+  font-size: 13px;
+  color: var(--muted);
+}
+
 /* Preselection Panel */
 #prePanel {
   margin-top: 0;
@@ -870,6 +896,18 @@ button:disabled {
   padding-top: 30px;
   padding-bottom: 25px;
   /* Boven- en onderruimte, pas aan naar wens */
+}
+
+.logo-container2 {
+  text-align: center;
+  padding: 10px 0 20px 0;
+  width: 100%;
+}
+
+.logo-container2 svg {
+  width: 75px;   /* actual logo size */
+  height: auto;
+  display: inline-block;
 }
 
 .logo-container svg {
@@ -979,6 +1017,29 @@ button:disabled {
   fill: #fff;
 }
 
+#infoModal .modal-content {
+  max-width: 500px;
+  text-align: left;
+}
+
+.info-icon {
+  width: 20px;
+  height: 20px;
+  opacity: 0.7;
+  cursor: pointer;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.info-icon:hover {
+  opacity: 1;
+  transform: scale(1.05);
+}
+
+#infoModal {
+  background: transparent !important;   /* geen donkere overlay */
+  backdrop-filter: none !important;     /* verwijder blur effect */
+}
+
 @media (max-width: 600px) {
   .beat-options {
     left: 200px !important;
@@ -994,7 +1055,6 @@ button:disabled {
 @media (max-width: 600px) {
   .section-title {
     display: flex;
-    align-items: initial;
   }
 }
 
