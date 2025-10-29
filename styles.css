@@ -917,6 +917,57 @@ button:disabled {
   /* Aspect ratio behouden */
 }
 
+.modal-content a[href*="carpaudio.com"] {
+  display: flex;
+  justify-content: center;
+}
+
+.modal-content a[href*="carpaudio.com"] img {
+  height: 60px;
+  width: auto;
+}
+
+.upgrade-btn {
+  background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+  border: none;
+  border-radius: 999px;
+  color: #000;
+  font-weight: 700;
+  font-size: 12px;
+  padding: 10px 15px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 0 8px rgba(0, 0, 0, 0.2);
+}
+
+.upgrade-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.upgrade-btn:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+#loginBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 16px;
+  padding-bottom: 7px;
+}
+
+#loginBtn .icon-user {
+  width: 18px;
+  height: 18px;
+  display: inline-block;
+  vertical-align: middle;
+  filter: brightness(0);
+  margin-bottom: 5px;
+}
+
 .ss-logo {
   width: 200px;
 }
@@ -1038,6 +1089,33 @@ button:disabled {
 #infoModal {
   background: transparent !important;   /* geen donkere overlay */
   backdrop-filter: none !important;     /* verwijder blur effect */
+}
+
+.optin-group {
+  display: flex;
+  justify-content: flex-start; /* align to left */
+  align-items: flex-start;
+  text-align: left;
+  margin-top: 8px;
+}
+
+.optin-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  justify-content: flex-start;
+  width: 100%;
+}
+
+.optin-label span {
+  text-transform: none;
+}
+
+.optin-label input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--accent); /* green accent color */
+  cursor: pointer;
 }
 
 @media (max-width: 600px) {

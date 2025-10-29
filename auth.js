@@ -202,27 +202,37 @@ function updateUI() {
   const userInfo = document.getElementById('userInfo');
   const userName = document.getElementById('userName');
   const downloadStatus = document.getElementById('downloadStatus');
-  const logoutBtn = document.getElementById('logoutBtn');
+  const upgradeBtn = document.getElementById('upgradeBtn');
 
-  if (!userMenu || !loginBtn) return; // UI not ready yet
+  if (!userMenu || !loginBtn) return; // UI not ready
 
   if (AppState.isAuthenticated) {
+    // Hide login button, show user info
     loginBtn.style.display = 'none';
     userInfo.style.display = 'flex';
-
     userName.textContent = AppState.user?.name || AppState.user?.email || 'User';
 
-    // Update download status
+    // Show/hide the upgrade button based on license
     if (AppState.hasLicense) {
-      downloadStatus.innerHTML = '<span class="premium-badge">Unlimited</span>';
+      if (upgradeBtn) upgradeBtn.style.display = 'none';
+      downloadStatus.innerHTML = `
+        <span class="premium-badge">Unlimited</span>`;
     } else {
+      if (upgradeBtn) upgradeBtn.style.display = 'inline-block';
       const remaining = AppState.downloadsRemaining;
-      const color = remaining === 0 ? '#ef4444' : remaining <= 2 ? '#f59e0b' : '#22c55e';
-      downloadStatus.innerHTML = `<span style="color:${color}">${remaining}/5</span> downloads today`;
+      const color =
+        remaining === 0 ? '#ef4444' :
+        remaining <= 2 ? '#f59e0b' :
+        '#22c55e';
+      downloadStatus.innerHTML = `
+        <span style="color:${color}">${remaining}/5</span> downloads today
+      `;
     }
   } else {
+    // Logged out
     loginBtn.style.display = 'block';
     userInfo.style.display = 'none';
+    if (upgradeBtn) upgradeBtn.style.display = 'none';
   }
 }
 
@@ -280,6 +290,16 @@ function hideUpgradeModal() {
   modal.style.display = 'none';
 }
 
+function showUpgradePromoModal() {
+  const modal = document.getElementById('upgradePromoModal');
+  if (modal) modal.style.display = 'flex';
+}
+
+function hideUpgradePromoModal() {
+  const modal = document.getElementById('upgradePromoModal');
+  if (modal) modal.style.display = 'none';
+}
+
 // =========================
 // Event Handlers
 // =========================
@@ -300,6 +320,11 @@ document.addEventListener('DOMContentLoaded', () => {
     logoutBtn.addEventListener('click', logout);
   }
 
+  const upgradeBtn = document.getElementById('upgradeBtn');
+  if (upgradeBtn) {
+    upgradeBtn.addEventListener('click', showUpgradePromoModal);
+  }
+
   // Tab switching
   const loginTab = document.getElementById('loginTab');
   const registerTab = document.getElementById('registerTab');
@@ -311,6 +336,20 @@ document.addEventListener('DOMContentLoaded', () => {
   if (registerTab) {
     registerTab.addEventListener('click', () => showAuthModal('register'));
   }
+
+  const upgradePromoModal = document.getElementById('upgradePromoModal');
+  if (upgradePromoModal) {
+    upgradePromoModal.addEventListener('click', (e) => {
+      if (e.target === upgradePromoModal) hideUpgradePromoModal();
+    });
+  }
+
+  document.querySelectorAll('.modal-close').forEach(btn => {
+    btn.addEventListener('click', () => {
+      hideUpgradeModal();
+      hideUpgradePromoModal();
+    });
+  });
 
   // Login form submit
   const loginFormEl = document.getElementById('loginForm');
@@ -381,6 +420,22 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
   }
+
+  // Shorten Upgrade button text on small screens
+function updateUpgradeButtonText() {
+  const upgradeBtn = document.getElementById('upgradeBtn');
+  if (!upgradeBtn) return;
+
+  if (window.innerWidth <= 600) {
+    upgradeBtn.textContent = 'Upgrade';
+  } else {
+    upgradeBtn.textContent = 'Upgrade to Unlimited';
+  }
+}
+
+// Run on load and resize
+updateUpgradeButtonText();
+window.addEventListener('resize', updateUpgradeButtonText);
 
   // Close buttons
   document.querySelectorAll('.modal-close').forEach(btn => {
