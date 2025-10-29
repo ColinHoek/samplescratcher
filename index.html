@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 
-<headli>
+<head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <link rel="icon" href="favicon.ico" type="image/x-icon">
@@ -195,6 +195,7 @@
 
       <!-- Login Form -->
       <form id="loginForm" class="auth-form">
+        <!-- Register By Email -->
         <div class="form-group">
           <label for="loginEmail">Email</label>
           <input type="email" id="loginEmail" required />
@@ -203,12 +204,25 @@
           <label for="loginPassword" style="margin-top: 5px;">Password</label>
           <input type="password" id="loginPassword" required />
         </div>
+        <div class="forgot-password">
+          <a href="https://dashboard.carpaudio.com/auth/reset" id="forgotPasswordLink">Forgot password?</a>
+        </div>
         <div id="loginError" class="error-message"></div>
         <button type="submit" class="primary" style="margin-top: 30px;">Login</button>
+
+
+        <div class="divider"><span>or</span></div>
+
+        <!-- Google Login Button -->
+        <button type="button" id="googleLoginBtn" class="google-login-btn">
+          <img src="icons/google-logo.svg" alt="Google Logo" style="width:18px; height:18px; margin-right:10px;" />
+          Continue with Google
+        </button>
       </form>
 
       <!-- Register Form -->
       <form id="registerForm" class="auth-form" style="display:none;">
+        <!-- Register By Email -->
         <div class="form-group">
           <label for="registerName">Name</label>
           <input type="text" id="registerName" required />
@@ -222,14 +236,22 @@
           <input type="password" id="registerPassword" required minlength="8" />
           <small>At least 8 characters</small>
         </div>
-          <div class="form-group optin-group">
-    <label class="optin-label">
-      <input type="checkbox" id="newsletterOptIn" />
-      <span>I’d like to receive updates and news by email</span>
-    </label>
-  </div>
+        <div class="form-group optin-group">
+          <label class="optin-label">
+            <input type="checkbox" id="newsletterOptIn" />
+            <span>I'd like to receive updates and news by email</span>
+          </label>
+        </div>
         <div id="registerError" class="error-message"></div>
         <button type="submit" class="primary" style="margin-top: 20px;">Create Account</button>
+
+        <div class="divider"><span>or</span></div>
+
+        <!-- Google Sign Up Button -->
+        <button type="button" id="googleRegisterBtn" class="google-login-btn">
+          <img src="icons/google-logo.svg" alt="Google Logo" style="width:18px; height:18px; margin-right:10px;" />
+          Sign up with Google
+        </button>  
       </form>
     </div>
   </div>
@@ -239,7 +261,8 @@
     <div class="modal-content">
       <button class="modal-close">&times;</button>
       <h2>Download Limit Reached</h2>
-      <p>You've used all 5 free downloads for today.</p>
+      <!-- TODO -->
+      <p>You've used all 2 free downloads for today.</p>
       <div class="upgrade-benefits">
         <h3>Upgrade to Unlimited</h3>
         <ul>
@@ -252,8 +275,9 @@
       <a href="https://carpaudio.com/products/sample-scratcher-unlimited" target="_blank" class="primary" style="display:inline-block; width: 100%; border-radius: 999px; padding:12px 40px; text-align: center; text-decoration:none;">
         Upgrade Now
       </a>
+      <!-- TODO -->
       <p style="margin-top:20px; font-size:14px; color:#999;">
-        Your 5 free downloads will reset tomorrow at midnight UTC.
+        Your 2 free downloads will reset tomorrow at midnight UTC.
       </p>
     </div>
   </div>
@@ -307,10 +331,16 @@
     // =========================
     // API Configuration
     // =========================
-    const API_URL = 'https://sample-scratcher-api.vercel.app'; // production API URL
+    // Development: use localhost
+    // Production: use Vercel URL
+    window.API_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.hostname === '0.0.0.0'
+      ? 'http://localhost:3000'
+      : 'https://sample-scratcher-api.vercel.app';
 
-    axios.defaults.baseURL = API_URL;
-    axios.defaults.withCredentials = false; // We use JWT tokens, not cookies
+    console.log('API URL:', window.API_URL);
+
+    axios.defaults.baseURL = window.API_URL;
+    axios.defaults.withCredentials = false; // We use JWT tokens, not cookies (except for Google OAuth)
 
     // =========================
     // Audio Context
@@ -1835,8 +1865,10 @@ if (infoIcon && infoModal && infoClose) {
       }
     }
 
+    // MAIN DOWNLOAD FUNCTION
     async function handleDownloadPreset(i) {
       try {
+        // TODO: Auth
         // Check if user is authenticated
         if (!AppState.isAuthenticated) {
           showAuthModal('login');
@@ -1847,6 +1879,7 @@ if (infoIcon && infoModal && infoClose) {
         const eligibility = await checkDownloadEligibility();
         if (!eligibility.allowed) {
           showUpgradeModal();
+          // TODO: Auth
           return;
         }
 

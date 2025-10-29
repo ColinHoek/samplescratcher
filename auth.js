@@ -3,6 +3,7 @@
 // Sample Scratcher - Phase 4
 // =========================
 
+// TODO
 // State Management
 const AppState = {
   isAuthenticated: false,
@@ -10,7 +11,7 @@ const AppState = {
   token: null,
   hasLicense: false,
   downloadsToday: 0,
-  downloadsRemaining: 5,
+  downloadsRemaining: 2,
   canDownload: true,
 };
 
@@ -98,6 +99,96 @@ async function login(email, password) {
   }
 }
 
+// Google Login function
+function loginWithGoogle() {
+  const width = 500;
+  const height = 600;
+  const left = window.screenX + (window.outerWidth - width) / 2;
+  const top = window.screenY + (window.outerHeight - height) / 2;
+
+  // Get API URL (set in index.html)
+  const apiUrl = window.API_URL || 'https://sample-scratcher-api.vercel.app';
+
+  // Listen for postMessage from popup with token
+  const messageHandler = (event) => {
+    // Verify origin is from API (localhost:3000 or production)
+    const isLocalhost = event.origin.includes('localhost:3000') ||
+                       event.origin.includes('127.0.0.1:3000') ||
+                       event.origin.includes('0.0.0.0:3000');
+    const isProduction = event.origin === 'https://sample-scratcher-api.vercel.app';
+
+    if (!isLocalhost && !isProduction) {
+      console.warn('Ignoring postMessage from unknown origin:', event.origin);
+      return;
+    }
+
+    if (event.data.type === 'GOOGLE_AUTH_SUCCESS') {
+      // Remove listener
+      window.removeEventListener('message', messageHandler);
+
+      // Handle successful login
+      handleGoogleAuthSuccess(event.data.token, event.data.user);
+    } else if (event.data.type === 'GOOGLE_AUTH_ERROR') {
+      // Remove listener
+      window.removeEventListener('message', messageHandler);
+
+      console.error('Google auth error:', event.data.error);
+      alert('Google login failed. Please try again or use email login.');
+    }
+  };
+
+  // Add message listener
+  window.addEventListener('message', messageHandler);
+
+  // Open custom signin page that redirects to Google OAuth
+  // After login, callback page will send token via postMessage
+  const callbackUrl = encodeURIComponent(`${apiUrl}/auth/callback`);
+  const popup = window.open(
+    `${apiUrl}/auth/signin?provider=google&callbackUrl=${callbackUrl}`,
+    'Google Login',
+    `width=${width},height=${height},left=${left},top=${top}`
+  );
+
+  // Cleanup if popup is closed without completing auth
+  const checkInterval = setInterval(() => {
+    if (popup?.closed) {
+      clearInterval(checkInterval);
+      // Remove listener after a delay (in case message is still coming)
+      setTimeout(() => {
+        window.removeEventListener('message', messageHandler);
+      }, 1000);
+    }
+  }, 500);
+}
+
+// Handle successful Google authentication
+async function handleGoogleAuthSuccess(token, user) {
+  try {
+    // Save token and user (same as email login)
+    AppState.token = token;
+    AppState.user = user;
+    AppState.isAuthenticated = true;
+    AppState.hasLicense = user.hasLicense;
+
+    localStorage.setItem('ss_auth_token', token);
+    localStorage.setItem('ss_user', JSON.stringify(user));
+
+    // Set default auth header
+    axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+
+    // Get download stats
+    await checkSession();
+
+    updateUI();
+    hideAuthModal();
+
+    console.log('Google login successful!', user);
+  } catch (error) {
+    console.error('Error handling Google auth:', error);
+    alert('Failed to complete login. Please try again.');
+  }
+}
+
 // Register function
 async function register(email, password, name) {
   try {
@@ -128,7 +219,7 @@ function logout() {
   AppState.token = null;
   AppState.hasLicense = false;
   AppState.downloadsToday = 0;
-  AppState.downloadsRemaining = 5;
+  AppState.downloadsRemaining = 2;
   AppState.canDownload = true;
 
   localStorage.removeItem('ss_auth_token');
@@ -224,8 +315,9 @@ function updateUI() {
         remaining === 0 ? '#ef4444' :
         remaining <= 2 ? '#f59e0b' :
         '#22c55e';
+        // TODO
       downloadStatus.innerHTML = `
-        <span style="color:${color}">${remaining}/5</span> downloads today
+        <span style="color:${color}">${remaining}/2</span> downloads today
       `;
     }
   } else {
@@ -260,6 +352,20 @@ function showAuthModal(mode = 'login') {
 
   // Clear any previous errors
   document.querySelectorAll('.error-message').forEach(el => el.textContent = '');
+
+  // Reset button states (in case they were left in loading state)
+  const loginBtn = document.querySelector('#loginForm button[type="submit"]');
+  const registerBtn = document.querySelector('#registerForm button[type="submit"]');
+
+  if (loginBtn) {
+    loginBtn.disabled = false;
+    loginBtn.textContent = 'Login';
+  }
+
+  if (registerBtn) {
+    registerBtn.disabled = false;
+    registerBtn.textContent = 'Create Account';
+  }
 }
 
 // Hide auth modal
@@ -276,6 +382,20 @@ function hideAuthModal() {
 
   // Clear errors
   document.querySelectorAll('.error-message').forEach(el => el.textContent = '');
+
+  // Reset button states
+  const loginBtn = document.querySelector('#loginForm button[type="submit"]');
+  const registerBtn = document.querySelector('#registerForm button[type="submit"]');
+
+  if (loginBtn) {
+    loginBtn.disabled = false;
+    loginBtn.textContent = 'Login';
+  }
+
+  if (registerBtn) {
+    registerBtn.disabled = false;
+    registerBtn.textContent = 'Create Account';
+  }
 }
 
 // Show upgrade modal
@@ -444,4 +564,16 @@ window.addEventListener('resize', updateUpgradeButtonText);
       hideUpgradeModal();
     });
   });
+
+  // Google Login buttons
+  const googleLoginBtn = document.getElementById('googleLoginBtn');
+  const googleRegisterBtn = document.getElementById('googleRegisterBtn');
+
+  if (googleLoginBtn) {
+    googleLoginBtn.addEventListener('click', loginWithGoogle);
+  }
+
+  if (googleRegisterBtn) {
+    googleRegisterBtn.addEventListener('click', loginWithGoogle);
+  }
 });
