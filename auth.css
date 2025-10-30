@@ -298,15 +298,15 @@
 .upgrade-benefits {
   margin: 24px 0;
   padding: 20px;
-  background: rgba(34, 197, 94, 0.05);
-  border: 1px solid rgba(34, 197, 94, 0.2);
+  background: rgba(197, 159, 34, 0.05);
+  border: 1px solid rgba(197, 159, 34, 0.2);
   border-radius: 8px;
 }
 
 .upgrade-benefits h3 {
   margin: 0 0 12px 0;
   font-size: 18px;
-  color: #22c55e;
+  color: #f59e0b;
 }
 
 .upgrade-benefits ul {
